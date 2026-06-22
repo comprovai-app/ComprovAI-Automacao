@@ -314,8 +314,23 @@
       <div class="card">
         <div class="card-title">📦 Limite de envios mensal</div>
         <div class="alert alert-info">Defina quantos comprovantes essa loja pode enviar por mês. O contador reseta automaticamente todo dia 1. Deixe em branco ou "ilimitado" para não ter limite.</div>
-        <label>Limite mensal de envios</label>
-        <input type="text" id="limite-mensal" placeholder="ilimitado" inputmode="numeric" />
+
+        <!-- Visualização travada (limite já definido) -->
+        <div id="limite-travado-view" style="display:none;">
+          <div style="text-align:center; padding:12px 0;">
+            <div style="font-size:13px; color:var(--text-secondary); margin-bottom:4px;">Limite atual do plano</div>
+            <div style="font-size:28px; font-weight:700; color:var(--text-primary);" id="limite-travado-valor">150</div>
+            <div style="font-size:12px; color:var(--text-secondary);">comprovantes por mês</div>
+          </div>
+          <button class="btn btn-gray" onclick="destrancarLimite()">✏️ Editar limite</button>
+        </div>
+
+        <!-- Visualização editável (sem limite ainda, ou após destrancar) -->
+        <div id="limite-edicao-view">
+          <label>Limite mensal de envios</label>
+          <input type="text" id="limite-mensal" placeholder="ilimitado" inputmode="numeric" />
+          <button class="btn btn-green" onclick="salvarLimiteMensal()">💾 Salvar limite</button>
+        </div>
       </div>
 
       <div class="card">
@@ -329,7 +344,6 @@
         </div>
         <button class="btn btn-gray" onclick="resetarContadorMensal()" style="margin-top:12px;">🔄 Resetar contador manualmente</button>
       </div>
-      <button class="btn btn-green" onclick="saveConfig()">💾 Salvar limite</button>
     </div>
   </div>
 
@@ -426,8 +440,6 @@ function saveConfig() {
   localStorage.setItem('pix_chave',     document.getElementById('pix-chave').value.trim());
   localStorage.setItem('pix_nome',      document.getElementById('pix-nome').value.trim());
   localStorage.setItem('pix_banco',     document.getElementById('pix-banco').value.trim());
-  const limiteTexto = document.getElementById('limite-mensal').value.trim().toLowerCase();
-  localStorage.setItem('limite_mensal', limiteTexto);
   localStorage.setItem('nome_loja',     document.getElementById('nome-loja').value.trim());
   localStorage.setItem('cor_loja',      document.getElementById('cor-hex').value.trim());
   aplicarAparencia();
@@ -759,6 +771,38 @@ function incrementarUsoMensal(qtd) {
   localStorage.setItem('uso_mensal_contador', String(atual + qtd));
 }
 
+function obterLimiteMensal() {
+  const valor = (localStorage.getItem('limite_mensal') || '').trim().toLowerCase();
+  if (valor === '' || valor === 'ilimitado') return null;
+  const num = parseInt(valor, 10);
+  return isNaN(num) || num <= 0 ? null : num;
+}
+
+function limiteJaFoiDefinido() {
+  // Considera "definido" se existe algo salvo no localStorage (mesmo que seja "ilimitado" explícito).
+  // Só fica destravado se o cliente nunca configurou nada ainda.
+  return localStorage.getItem('limite_mensal') !== null && localStorage.getItem('limite_mensal') !== '';
+}
+
+function salvarLimiteMensal() {
+  const limiteTexto = document.getElementById('limite-mensal').value.trim().toLowerCase();
+  if (limiteTexto === '') {
+    alert('Digite um número de limite, ou "ilimitado" se não quiser restringir.');
+    return;
+  }
+  localStorage.setItem('limite_mensal', limiteTexto);
+  atualizarResumoUsoMensal();
+  alert('✅ Limite salvo!');
+}
+
+function destrancarLimite() {
+  if (confirm('Deseja editar o limite mensal desta loja?')) {
+    document.getElementById('limite-travado-view').style.display = 'none';
+    document.getElementById('limite-edicao-view').style.display = 'block';
+    document.getElementById('limite-mensal').value = localStorage.getItem('limite_mensal') || '';
+  }
+}
+
 function resetarContadorMensal() {
   if (confirm('Resetar o contador de uso deste mês para 0? Use isso apenas se precisar corrigir manualmente.')) {
     localStorage.setItem('uso_mensal_mes', obterMesAtual());
@@ -766,13 +810,6 @@ function resetarContadorMensal() {
     atualizarResumoUsoMensal();
     alert('✅ Contador resetado!');
   }
-}
-
-function obterLimiteMensal() {
-  const valor = (localStorage.getItem('limite_mensal') || '').trim().toLowerCase();
-  if (valor === '' || valor === 'ilimitado') return null;
-  const num = parseInt(valor, 10);
-  return isNaN(num) || num <= 0 ? null : num;
 }
 
 function atualizarResumoUsoMensal() {
@@ -793,6 +830,20 @@ function atualizarResumoUsoMensal() {
   } else {
     labelEl.textContent = 'comprovantes enviados (sem limite definido)';
     barraEl.style.width = '0%';
+  }
+
+  // Decide qual view mostrar: travada (já tem limite configurado) ou edição (primeira vez)
+  const travadaView = document.getElementById('limite-travado-view');
+  const edicaoView = document.getElementById('limite-edicao-view');
+  if (travadaView && edicaoView) {
+    if (limiteJaFoiDefinido()) {
+      document.getElementById('limite-travado-valor').textContent = limite ? limite : 'Ilimitado';
+      travadaView.style.display = 'block';
+      edicaoView.style.display = 'none';
+    } else {
+      travadaView.style.display = 'none';
+      edicaoView.style.display = 'block';
+    }
   }
 }
 
