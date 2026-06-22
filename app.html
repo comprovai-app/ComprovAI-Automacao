@@ -525,6 +525,45 @@ function onFilesSelected(files) {
   atualizarAvisoIntervalo();
 }
 
+// ===== COMPARTILHAMENTO: recebe fotos compartilhadas de outros apps (Galeria, Google Fotos, etc) =====
+async function verificarFotosCompartilhadas() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('compartilhado') !== '1') return;
+
+  // Limpa o parâmetro da URL pra não tentar carregar de novo se a página recarregar
+  window.history.replaceState({}, '', window.location.pathname);
+
+  try {
+    const db = await abrirBancoCompartilhamentoApp();
+    const tx = db.transaction('fotos', 'readwrite');
+    const store = tx.objectStore('fotos');
+    const arquivos = await new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    await store.clear();
+
+    if (arquivos && arquivos.length > 0) {
+      onFilesSelected(arquivos);
+      setSection('sec-upload');
+    }
+  } catch (e) {
+    console.log('Nenhuma foto compartilhada encontrada:', e.message);
+  }
+}
+
+function abrirBancoCompartilhamentoApp() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('comprovai-share', 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore('fotos', { autoIncrement: true });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 function renderThumbGrid() {
   const grid = document.getElementById('thumb-grid');
   grid.innerHTML = '';
@@ -1092,6 +1131,7 @@ function toggleTheme() {
 aplicarTema();
 loadConfig();
 atualizarAvisoTaxaTodos();
+verificarFotosCompartilhadas();
 
 // Se o app foi recarregado (fechado e reaberto) no meio de um lote, os arquivos
 // de imagem se perdem da memória — avisa o usuário em vez de deixar confuso

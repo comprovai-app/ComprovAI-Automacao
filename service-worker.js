@@ -1,6 +1,6 @@
 // Service Worker para D'Leia Comprovantes
 // Versão do app — MUDE ESTE NÚMERO sempre que atualizar o app
-const APP_VERSION = '3.5.0';
+const APP_VERSION = '4.0.0';
 const CACHE_NAME = 'dleia-comprovante-' + APP_VERSION;
 
 const ASSETS_TO_CACHE = [
@@ -41,6 +41,12 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
+  // Intercepta o POST de "compartilhar com o app" (Web Share Target)
+  if (req.method === 'POST' && url.pathname.endsWith('/app.html')) {
+    event.respondWith(handleShareTarget(event));
+    return;
+  }
+
   // Deixa passar direto: métodos diferentes de GET (POST/PUT/etc das APIs)
   // e requisições para outros domínios (api.anthropic.com, servidor Evolution API)
   if (req.method !== 'GET' || url.origin !== self.location.origin) {
@@ -62,6 +68,38 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// Recebe as fotos compartilhadas de outro app (Galeria, Google Fotos, etc),
+// guarda temporariamente e redireciona para o app já sinalizando que há fotos esperando
+async function handleShareTarget(event) {
+  try {
+    const formData = await event.request.formData();
+    const arquivos = formData.getAll('fotos-compartilhadas');
+
+    const db = await abrirBancoCompartilhamento();
+    const tx = db.transaction('fotos', 'readwrite');
+    const store = tx.objectStore('fotos');
+    await store.clear();
+    for (const arquivo of arquivos) {
+      await store.add(arquivo);
+    }
+
+    return Response.redirect('./app.html?compartilhado=1', 303);
+  } catch (e) {
+    return Response.redirect('./app.html', 303);
+  }
+}
+
+function abrirBancoCompartilhamento() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('comprovai-share', 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore('fotos', { autoIncrement: true });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
 
 // Avisa o app quando há uma nova versão disponível
 self.addEventListener('message', (event) => {
