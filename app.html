@@ -475,7 +475,7 @@ function saveConfig() {
   localStorage.setItem('cor_loja',      document.getElementById('cor-hex').value.trim());
   aplicarAparencia();
   atualizarVisibilidadeAbaApis();
-  alert('✅ Configurações salvas!');
+  mostrarAvisoCustomizado('Configurações salvas!', '✅');
 }
 
 function loadConfig() {
@@ -558,12 +558,12 @@ function salvarTaxaTodos() {
   localStorage.setItem('taxa_todos_ativa', ativado ? '1' : '0');
   const valorTexto = document.getElementById('taxa-todos-valor').value.trim().replace(',', '.');
   if (ativado && (!valorTexto || isNaN(parseFloat(valorTexto)))) {
-    alert('⚠️ Digite um valor válido para a taxa antes de ativar a cobrança para todos.');
+    mostrarAvisoCustomizado('Digite um valor válido para a taxa antes de ativar a cobrança para todos.', '⚠️');
     return;
   }
   localStorage.setItem('taxa_todos_valor', valorTexto);
   atualizarAvisoTaxaTodos();
-  alert(ativado ? '✅ Cobrança de taxa para todos ativada!' : '✅ Cobrança de taxa para todos desativada.');
+  mostrarAvisoCustomizado(ativado ? 'Cobrança de taxa para todos ativada!' : 'Cobrança de taxa para todos desativada.', '✅');
 }
 
 function syncCor(val) {
@@ -869,6 +869,22 @@ function mostrarAvisoVoltouAtivo() {
   if (banner) banner.style.display = 'none';
 }
 
+// Mostra um aviso em modal próprio do app, sem o cabeçalho padrão do navegador
+// (diferente do alert() nativo, que sempre exibe "site diz" em cima da mensagem)
+function mostrarAvisoCustomizado(texto, icone) {
+  const overlay = document.createElement('div');
+  overlay.className = 'qr-modal-overlay';
+  overlay.innerHTML = `
+    <div class="qr-modal-box">
+      <div style="font-size:32px; margin-bottom:8px;">${icone || '⚠️'}</div>
+      <p style="font-size:14px; color:var(--text-primary); line-height:1.6; margin-bottom:16px;">${texto}</p>
+      <button class="btn btn-green" id="aviso-custom-ok">OK</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#aviso-custom-ok').addEventListener('click', () => overlay.remove());
+}
+
 // ===== RETOMAR LOTE: salva progresso para continuar se a página recarregar =====
 function salvarProgressoLote(indiceAtual, total) {
   localStorage.setItem('lote_em_andamento', JSON.stringify({
@@ -941,12 +957,12 @@ function limiteJaFoiDefinido() {
 function salvarLimiteMensal() {
   const limiteTexto = document.getElementById('limite-mensal').value.trim().toLowerCase();
   if (limiteTexto === '') {
-    alert('Digite um número de limite, ou 0 se não quiser restringir (ilimitado).');
+    mostrarAvisoCustomizado('Digite um número de limite, ou 0 se não quiser restringir (ilimitado).', '⚠️');
     return;
   }
   localStorage.setItem('limite_mensal', limiteTexto);
   atualizarResumoUsoMensal();
-  alert('✅ Limite salvo!');
+  mostrarAvisoCustomizado('Limite salvo!', '✅');
 }
 
 const SENHA_ADMIN_LIMITE = '6DOfJ9cv6RQJ\\7vP.e{6|RMZX7£1\\o';
@@ -955,13 +971,13 @@ const SENHA_ADMIN_LIMITE = '6DOfJ9cv6RQJ\\7vP.e{6|RMZX7£1\\o';
 // for igual à senha de administrador, ou callback(false) se cancelar/falhar.
 function abrirLeitorQrAdmin(callback) {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert('Este dispositivo/navegador não tem suporte à câmera. Não é possível ler o QR Code.');
+    mostrarAvisoCustomizado('Este dispositivo/navegador não tem suporte à câmera. Não é possível ler o QR Code.', '🚫');
     callback(false);
     return;
   }
 
   if (!('BarcodeDetector' in window)) {
-    alert('Este navegador não tem suporte nativo à leitura de QR Code. Tente pelo Chrome atualizado no Android, ou digite a senha manualmente (em breve).');
+    mostrarAvisoCustomizado('Este navegador não tem suporte nativo à leitura de QR Code. Tente pelo Chrome atualizado no Android.', '🚫');
     callback(false);
     return;
   }
@@ -1046,7 +1062,7 @@ function resetarContadorMensal() {
       localStorage.setItem('uso_mensal_mes', obterMesAtual());
       localStorage.setItem('uso_mensal_contador', '0');
       atualizarResumoUsoMensal();
-      alert('✅ Contador resetado!');
+      mostrarAvisoCustomizado('Contador resetado!', '✅');
     }
   });
 }
@@ -1096,14 +1112,14 @@ async function startProcessing() {
   const evoApiKey     = localStorage.getItem('evo_apikey');
 
   if (!anthropicKey || !evoServer || !evoInstance || !evoApiKey) {
-    alert('Configure todas as chaves no Painel antes de enviar.');
+    mostrarAvisoCustomizado('Configure todas as chaves no Painel antes de enviar.', '⚠️');
     return;
   }
 
   // Exige que um plano (limite mensal, mesmo que "ilimitado") tenha sido definido
   // explicitamente antes de liberar qualquer envio — evita uso sem plano configurado.
   if (!limiteJaFoiDefinido()) {
-    alert('📦 Nenhum plano foi configurado ainda para esta loja. Vá em ⚙️ Painel → 📦 Plano e defina o limite mensal antes de enviar comprovantes.');
+    mostrarAvisoCustomizado('Nenhum plano foi configurado ainda para esta loja.', '📦');
     setSection('sec-painel');
     const btnPlano = document.querySelector('.nav-tab[onclick*="tab-plano"]');
     if (btnPlano) showTab('tab-plano', btnPlano);
@@ -1116,7 +1132,7 @@ async function startProcessing() {
     const usoAtual = obterUsoMensal();
     const restante = limiteMensal - usoAtual;
     if (restante <= 0) {
-      alert(`🚫 Limite mensal de ${limiteMensal} comprovantes já foi atingido! O contador reseta automaticamente no dia 1 do próximo mês, ou você pode ajustar o limite em ⚙️ Painel → 📦 Plano.`);
+      mostrarAvisoCustomizado('Limite mensal de comprovantes já foi atingido!', '🚫');
       return;
     }
     if (selectedFiles.length > restante) {
@@ -1347,7 +1363,7 @@ function showDone(ok, err) {
 async function compartilharFoto(i) {
   const item = dadosLidos[i];
   if (!item || !item.file) {
-    alert('Foto não disponível para compartilhar.');
+    mostrarAvisoCustomizado('Foto não disponível para compartilhar.', '⚠️');
     return;
   }
 
@@ -1375,7 +1391,7 @@ async function compartilharFoto(i) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  alert('Seu navegador não permite compartilhar direto. A foto foi baixada — envie manualmente pelo WhatsApp.');
+  mostrarAvisoCustomizado('Seu navegador não permite compartilhar direto. A foto foi baixada — envie manualmente pelo WhatsApp.', '⚠️');
 }
 
 function salvarHistorico(inicioLote, ok, err) {
@@ -1583,7 +1599,7 @@ const lotePendente = verificarLotePendente();
 if (lotePendente) {
   limparProgressoLote();
   setTimeout(() => {
-    alert(`⚠️ O envio anterior foi interrompido no item ${lotePendente.indice + 1} de ${lotePendente.total} (o app foi fechado ou recarregado). Selecione as fotos que ainda faltam enviar e tente novamente.`);
+    mostrarAvisoCustomizado(`O envio anterior foi interrompido no item ${lotePendente.indice + 1} de ${lotePendente.total} (o app foi fechado ou recarregado). Selecione as fotos que ainda faltam enviar.`, '⚠️');
   }, 300);
 }
 
