@@ -670,14 +670,59 @@ function abrirBancoCompartilhamentoApp() {
 function renderThumbGrid() {
   const grid = document.getElementById('thumb-grid');
   grid.innerHTML = '';
+
+  // Constrói tudo numa string só (muito mais rápido que grid.innerHTML += dentro do loop,
+  // que reconstrói o HTML inteiro a cada iteração e trava com muitos itens)
+  let htmlPartes = [];
   selectedFiles.forEach((f, i) => {
-    const url = URL.createObjectURL(f);
-    grid.innerHTML += `
-      <div class="thumb">
-        <img src="${url}">
+    htmlPartes.push(`
+      <div class="thumb" id="thumb-item-${i}">
+        <img id="thumb-img-${i}" src="" loading="lazy">
         <span class="num">${i+1}</span>
         <button class="remover" onclick="removerFoto(${i})" title="Remover esta foto">✕</button>
-      </div>`;
+      </div>`);
+  });
+  grid.innerHTML = htmlPartes.join('');
+
+  // Gera as miniaturas em tamanho reduzido (não a foto original em alta resolução),
+  // de forma assíncrona e em pequenos lotes, para não travar a tela com muitas fotos
+  gerarMiniaturasEmLotes();
+}
+
+async function gerarMiniaturasEmLotes() {
+  const TAMANHO_LOTE = 8;
+  for (let i = 0; i < selectedFiles.length; i += TAMANHO_LOTE) {
+    const lote = selectedFiles.slice(i, i + TAMANHO_LOTE);
+    await Promise.all(lote.map((file, idx) => gerarMiniatura(file, i + idx)));
+    // Pequena pausa entre lotes para o navegador "respirar" e não travar a interface
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+}
+
+function gerarMiniatura(file, index) {
+  return new Promise((resolve) => {
+    const imgEl = document.getElementById('thumb-img-' + index);
+    if (!imgEl) { resolve(); return; }
+
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const TAMANHO_MAX = 150; // miniatura pequena, suficiente para visualização na grade
+      const canvas = document.createElement('canvas');
+      const escala = Math.min(1, TAMANHO_MAX / Math.max(img.width, img.height));
+      canvas.width = Math.round(img.width * escala);
+      canvas.height = Math.round(img.height * escala);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      imgEl.src = canvas.toDataURL('image/jpeg', 0.6);
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    img.src = url;
   });
 }
 
