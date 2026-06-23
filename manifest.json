@@ -1,7 +1,7 @@
 {
   "name": "ComproV",
   "short_name": "ComproV",
-  "description": "Envio automático de comprovantes via WhatsApp com leitura de etiqueta por IA",
+  "description": "Envio automático de comprovantes via WhatsApp com leitura inteligente de etiquetas",
   "start_url": "./app.html",
   "scope": "./",
   "display": "standalone",

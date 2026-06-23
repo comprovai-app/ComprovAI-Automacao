@@ -230,7 +230,7 @@
     <!-- ABA APIs -->
     <div id="tab-apis">
       <div class="card">
-        <div class="card-title">🤖 Claude (Anthropic)</div>
+        <div class="card-title">🔑 Leitura de Etiquetas</div>
         <label>Chave API <span class="label-hint">console.anthropic.com/settings/keys</span></label>
         <input type="password" id="anthropic-key" placeholder="sk-ant-..." autocomplete="off" data-lpignore="true" data-1p-ignore />
       </div>
@@ -252,7 +252,7 @@
         <div class="card-title">⏱️ Intervalo entre envios</div>
         <div class="alert alert-info">O app calcula o intervalo automaticamente pela quantidade de etiquetas: até 20 → 4s · até 50 → 6s · mais de 50 → 10s. Toque em "Automático" para usar esse cálculo, ou escolha um tempo fixo.</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-          <span class="tag-hint" onclick="setIntervalo('auto')">🤖 Automático</span>
+          <span class="tag-hint" onclick="setIntervalo('auto')">⏱️ Automático</span>
           <span class="tag-hint" onclick="setIntervalo('3')">3s</span>
           <span class="tag-hint" onclick="setIntervalo('5')">5s</span>
           <span class="tag-hint" onclick="setIntervalo('8')">8s</span>
@@ -386,7 +386,7 @@
   <div class="section active" id="sec-upload">
     <div class="card">
       <div class="card-title">📸 Selecionar etiquetas</div>
-      <div class="alert alert-info">A IA lê cada etiqueta e envia a foto + mensagem direto no WhatsApp do cliente!</div>
+      <div class="alert alert-info">O sistema lê cada etiqueta e envia a foto + mensagem direto no WhatsApp do cliente!</div>
       <div class="upload-area" onclick="document.getElementById('file-input').click()">
         <div class="icon">📸</div>
         <p>Toque para selecionar as fotos</p>
@@ -1154,7 +1154,7 @@ async function startProcessing() {
 
     salvarProgressoLote(i, selectedFiles.length);
     updateProgress(i, selectedFiles.length);
-    updateItem(i, selectedFiles[i].name, 'IA lendo a imagem...', 'Lendo', 'badge-proc');
+    updateItem(i, selectedFiles[i].name, 'Lendo a imagem...', 'Lendo', 'badge-proc');
     let dadosParciais = null;
     try {
       const dados = await lerEtiqueta(selectedFiles[i], anthropicKey);
@@ -1249,13 +1249,13 @@ async function lerEtiqueta(file, apiKey) {
       ]}]
     })
   });
-  if (!resp.ok) throw new Error('Claude erro ' + resp.status);
+  if (!resp.ok) throw new Error('Erro ao processar etiqueta (' + resp.status + ')');
   const data = await resp.json();
   const text = data.content.map(c => c.text||'').join('').replace(/```json|```/g,'').trim();
   try {
     return JSON.parse(text);
   } catch (e) {
-    throw new Error('A IA não conseguiu ler esta etiqueta corretamente. Tente novamente ou use uma foto mais nítida.');
+    throw new Error('Não foi possível ler esta etiqueta corretamente. Tente novamente ou use uma foto mais nítida.');
   }
 }
 
@@ -1345,7 +1345,7 @@ async function compartilharFoto(i) {
     return;
   }
 
-  // Só monta a legenda do comprovante se a IA conseguiu ler o telefone
+  // Só monta a legenda do comprovante se o sistema conseguiu ler o telefone
   const legenda = item.telefone ? montarMensagem(item) : '';
 
   // Web Share API com arquivo: abre o menu nativo do celular (WhatsApp, etc)
