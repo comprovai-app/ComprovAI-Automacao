@@ -239,16 +239,16 @@
     <div id="tab-apis">
       <div class="card">
         <div class="card-title">🔑 Leitura de Etiquetas</div>
-        <label>Chave API <span class="label-hint">console.anthropic.com/settings/keys</span></label>
+        <label>Chave API <span class="label-hint">⚠️ NOVA para cada cliente — console.anthropic.com/settings/keys</span></label>
         <input type="password" id="anthropic-key" placeholder="sk-ant-..." autocomplete="off" data-lpignore="true" data-1p-ignore />
       </div>
       <div class="card">
         <div class="card-title">📱 Evolution API (WhatsApp)</div>
-        <label>URL do servidor <span class="label-hint">sem https://</span></label>
+        <label>URL do servidor <span class="label-hint">✅ SEMPRE A MESMA, sem https://</span></label>
         <input type="text" id="evo-server" placeholder="evolution-api-ll04.srv1770269.hstgr.cloud" autocomplete="off" data-lpignore="true" data-1p-ignore />
-        <label>Nome da instância</label>
+        <label>Nome da instância <span class="label-hint">⚠️ NOVO para cada cliente</span></label>
         <input type="text" id="evo-instance" placeholder="minha-loja" autocomplete="off" data-lpignore="true" data-1p-ignore />
-        <label>API Key</label>
+        <label>Token da instância (API Key) <span class="label-hint">⚠️ NOVO para cada cliente — aparece ao criar a instância</span></label>
         <input type="password" id="evo-apikey" placeholder="91635C7604D9-4FC1-BCF7-4D9B3E0658FB" autocomplete="off" data-lpignore="true" data-1p-ignore />
       </div>
       <button class="btn btn-green" onclick="saveConfig()">💾 Salvar configurações</button>
@@ -444,7 +444,6 @@
     </div>
     <div class="card" id="done-list"></div>
     <button class="btn btn-green" onclick="resetApp()">📸 Novo lote</button>
-    <button class="btn btn-gray" onclick="setSection('sec-painel')" style="margin-top:8px">⚙️ Ir para o Painel</button>
   </div>
 
   <!-- ========== HISTÓRICO ========== -->
