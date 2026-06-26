@@ -585,6 +585,49 @@ async function ativarPorCodigo() {
   }
 }
 
+// ===== SINCRONIZAR COM O BACKEND =====
+// Re-consulta o backend pelo codigo salvo e atualiza plano/limite/chaves.
+// Retorna um objeto: { ok: true } se ativo, { ok:false, motivo:'inativo'|'naoexiste'|'offline'|'erro' }
+async function sincronizarConfig() {
+  const codigo = localStorage.getItem('codigo_acesso');
+  if (!codigo) return { ok: false, motivo: 'semcodigo' };
+
+  let resp;
+  try {
+    resp = await fetch(`${COMPROV_BACKEND}/config/${encodeURIComponent(codigo)}`);
+  } catch (e) {
+    // Sem internet ou backend fora do ar: postura PERMISSIVA — segue com a config local
+    return { ok: true, motivo: 'offline' };
+  }
+
+  if (resp.status === 404) return { ok: false, motivo: 'naoexiste' };
+  if (resp.status === 403) return { ok: false, motivo: 'inativo' };
+  if (!resp.ok) {
+    // Erro inesperado do servidor: postura PERMISSIVA — nao bloqueia o cliente legitimo
+    return { ok: true, motivo: 'erro' };
+  }
+
+  try {
+    const cfg = await resp.json();
+    const servidor = (cfg.evolution_url || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+    localStorage.setItem('anthropic_key', cfg.anthropic_key || '');
+    localStorage.setItem('evo_server',    servidor);
+    localStorage.setItem('evo_instance',  cfg.instancia || '');
+    localStorage.setItem('evo_apikey',    cfg.instancia_token || '');
+    if (cfg.limite_envios !== undefined && cfg.limite_envios !== null) {
+      localStorage.setItem('limite_mensal', String(cfg.limite_envios));
+    }
+    if (cfg.vencimento) {
+      const diaVenc = new Date(cfg.vencimento).getUTCDate();
+      if (diaVenc >= 1 && diaVenc <= 31) localStorage.setItem('dia_ciclo', String(diaVenc));
+    }
+    atualizarResumoUsoMensal();
+    return { ok: true, motivo: 'atualizado' };
+  } catch (e) {
+    return { ok: true, motivo: 'erro' };
+  }
+}
+
 function loadConfig() {
   document.getElementById('anthropic-key').value = localStorage.getItem('anthropic_key') || '';
   document.getElementById('evo-server').value    = localStorage.getItem('evo_server') || '';
@@ -1448,15 +1491,35 @@ function atualizarResumoUsoMensal() {
 }
 
 async function startProcessing() {
-  const anthropicKey = localStorage.getItem('anthropic_key');
-  const evoServer     = localStorage.getItem('evo_server');
-  const evoInstance   = localStorage.getItem('evo_instance');
-  const evoApiKey     = localStorage.getItem('evo_apikey');
+  let anthropicKey = localStorage.getItem('anthropic_key');
+  let evoServer     = localStorage.getItem('evo_server');
+  let evoInstance   = localStorage.getItem('evo_instance');
+  let evoApiKey     = localStorage.getItem('evo_apikey');
 
   if (!anthropicKey || !evoServer || !evoInstance || !evoApiKey) {
     mostrarAvisoCustomizado('Configure todas as chaves no Painel antes de enviar.', '⚠️');
     return;
   }
+
+  // Antes de enviar, confere com o backend se a assinatura ainda esta ativa
+  // e pega plano/limite atualizados. Postura permissiva se estiver offline.
+  const sync = await sincronizarConfig();
+  if (!sync.ok) {
+    if (sync.motivo === 'inativo') {
+      mostrarAvisoCustomizado('Sua assinatura esta inativa. Entre em contato para reativar.', '🚫');
+    } else if (sync.motivo === 'naoexiste') {
+      mostrarAvisoCustomizado('Codigo de acesso invalido. Ative sua loja novamente no Painel.', '🔑');
+    } else {
+      mostrarAvisoCustomizado('Nao foi possivel verificar sua assinatura. Tente novamente.', '⚠️');
+    }
+    return;
+  }
+
+  // Recarrega as chaves caso a sincronizacao tenha atualizado alguma
+  anthropicKey = localStorage.getItem('anthropic_key');
+  evoServer    = localStorage.getItem('evo_server');
+  evoInstance  = localStorage.getItem('evo_instance');
+  evoApiKey    = localStorage.getItem('evo_apikey');
 
   // O limite vem do plano definido no painel (backend), salvo ao ativar pelo código.
   // Se não houver limite, a loja não foi ativada corretamente — manda ativar de novo.
@@ -1958,6 +2021,19 @@ aplicarTema();
 loadConfig();
 atualizarAvisoTaxaTodos();
 verificarFotosCompartilhadas();
+
+// Ao abrir o app, sincroniza com o backend em segundo plano para pegar
+// plano/limite atualizados. Se a assinatura foi desativada, avisa o cliente.
+if (localStorage.getItem('codigo_acesso')) {
+  sincronizarConfig().then((sync) => {
+    if (!sync.ok && (sync.motivo === 'inativo' || sync.motivo === 'naoexiste')) {
+      const txt = sync.motivo === 'inativo'
+        ? 'Sua assinatura esta inativa. Entre em contato para reativar.'
+        : 'Codigo de acesso invalido. Ative sua loja novamente no Painel.';
+      mostrarAvisoCustomizado(txt, '🚫');
+    }
+  });
+}
 
 // Tela inicial inteligente: se a loja ainda não foi ativada (sem código salvo),
 // abre direto no Painel na aba de ativação. Se já ativou, segue normal (Enviar).
