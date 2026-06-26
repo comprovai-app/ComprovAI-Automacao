@@ -1378,13 +1378,13 @@ async function startProcessing() {
   for (let i = 0; i < selectedFiles.length; i++) {
     // Para automaticamente se o limite mensal foi atingido no meio do lote
     if (limiteMensal && obterUsoMensal() >= limiteMensal) {
-      updateItem(i, selectedFiles[i].name, `Limite mensal de ${limiteMensal} atingido — envio interrompido`, 'Erro', 'badge-err');
+      updateItem(i, selectedFiles[i].name, 'Limite de envios do mês atingido.', 'Erro', 'badge-err');
       dadosLidos.push({
         nome: selectedFiles[i].name,
         file: selectedFiles[i],
         sucesso: false,
         previewUrl: items[i].previewUrl,
-        erro: `Limite mensal de ${limiteMensal} atingido`
+        erro: 'Limite de envios do mês atingido.'
       });
       err++;
       continue;
@@ -1396,14 +1396,14 @@ async function startProcessing() {
     // Verifica se esta exata foto já foi enviada antes (em outro lote, mesmo dia ou anterior)
     const hashArquivo = await calcularHashArquivo(selectedFiles[i]);
     if (jaFoiEnviadoAntes(hashArquivo)) {
-      updateItem(i, selectedFiles[i].name, 'Esta foto já foi enviada antes — envio bloqueado', 'Duplicada', 'badge-err');
+      updateItem(i, selectedFiles[i].name, 'Esta foto já foi enviada anteriormente.', 'Duplicada', 'badge-err');
       dadosLidos.push({
         nome: selectedFiles[i].name,
         file: selectedFiles[i],
         sucesso: false,
         duplicado: true,
         previewUrl: items[i].previewUrl,
-        erro: 'Foto duplicada — já enviada anteriormente'
+        erro: 'Esta foto já foi enviada anteriormente.'
       });
       err++;
       updateProgress(i+1, selectedFiles.length);
@@ -1423,7 +1423,7 @@ async function startProcessing() {
       }
 
       dadosParciais = dados;
-      if (!dados || !dados.telefone) throw new Error('Telefone não encontrado');
+      if (!dados || !dados.telefone) throw new Error('Número de telefone não encontrado na etiqueta.');
       updateItem(i, dados.nome || selectedFiles[i].name, `${dados.telefone} · Enviando...`, 'Enviando', 'badge-proc');
       await enviarFoto(selectedFiles[i], dados, evoServer, evoInstance, evoApiKey);
       updateItem(i, dados.nome, `${dados.telefone} · ✓ Enviado`, 'Enviado', 'badge-ok');
@@ -1433,7 +1433,7 @@ async function startProcessing() {
       limparErroDeApi();
       ok++;
     } catch(e) {
-      updateItem(i, (dadosParciais && dadosParciais.nome) || selectedFiles[i].name, 'Erro: ' + e.message, 'Erro', 'badge-err');
+      updateItem(i, (dadosParciais && dadosParciais.nome) || selectedFiles[i].name, e.message, 'Erro', 'badge-err');
       dadosLidos.push({
         ...(dadosParciais || {}),
         nome: (dadosParciais && dadosParciais.nome) || selectedFiles[i].name,
@@ -1442,14 +1442,10 @@ async function startProcessing() {
         previewUrl: items[i].previewUrl,
         erro: e.message
       });
-      // Erros de chave/autenticação reabrem a aba APIs automaticamente para corrigir.
-      // Erros de leitura (ex: telefone não encontrado na etiqueta) não significam chave errada.
+      // ERR-03 e ERR-04 indicam problemas de autenticação/configuração da API de envio
+      // ERR-01 e ERR-02 são erros de leitura da etiqueta, não de configuração
       const msgErro = (e.message || '').toLowerCase();
-      const pareceErroDeChave = msgErro.includes('401') || msgErro.includes('403') ||
-        msgErro.includes('invalid') || msgErro.includes('unauthorized') ||
-        msgErro.includes('api key') || msgErro.includes('apikey') ||
-        msgErro.includes('instance') || msgErro.includes('not found') ||
-        msgErro.includes('failed to fetch') || msgErro.includes('404');
+      const pareceErroDeChave = msgErro.includes('falha ao enviar') || msgErro.includes('err-05');
       if (pareceErroDeChave) marcarErroDeApi();
       err++;
     }
@@ -1506,13 +1502,13 @@ async function lerEtiqueta(file, apiKey) {
       ]}]
     })
   });
-  if (!resp.ok) throw new Error('Erro ao processar etiqueta (' + resp.status + ')');
+  if (!resp.ok) throw new Error('Não foi possível ler esta etiqueta. Use uma foto mais nítida e tente novamente.');
   const data = await resp.json();
   const text = data.content.map(c => c.text||'').join('').replace(/```json|```/g,'').trim();
   try {
     return JSON.parse(text);
   } catch (e) {
-    throw new Error('Não foi possível ler esta etiqueta corretamente. Tente novamente ou use uma foto mais nítida.');
+    throw new Error('Não foi possível ler esta etiqueta. Use uma foto mais nítida e tente novamente.');
   }
 }
 
@@ -1535,7 +1531,7 @@ async function enviarFoto(file, dados, serverUrl, instanceName, apiKey) {
   });
   if (!resp.ok) {
     const txt = await resp.text();
-    throw new Error('Evolution API foto erro ' + resp.status + ': ' + txt.slice(0,120));
+    throw new Error('Falha ao enviar a foto. Verifique sua conexão e tente novamente.');
   }
 }
 
@@ -1550,7 +1546,7 @@ async function enviarMensagem(dados, serverUrl, instanceName, apiKey) {
   });
   if (!resp.ok) {
     const txt = await resp.text();
-    throw new Error('Evolution API msg erro ' + resp.status + ': ' + txt.slice(0,120));
+    throw new Error('Falha ao enviar a mensagem. Verifique sua conexão e tente novamente.');
   }
 }
 
