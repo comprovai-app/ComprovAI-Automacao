@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ComproV — Comprovante WhatsApp</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#3a3f44" id="meta-theme-color">
+<style>
+  :root {
+    --bg: #f5f5f0;
+    --card-bg: #fff;
+    --card-border: #e8e8e4;
+    --text-primary: #222;
+    --text-secondary: #888;
+    --text-tertiary: #aaa;
+    --input-bg: #fafafa;
+    --input-field-bg: #fafafa;
+    --input-border: #ddd;
+    --row-border: #f0f0f0;
+    --gray-bg: #eee;
+    --gray-text: #555;
+    --summary-bg: #f8f8f5;
+    --tab-bg: #f0f0ec;
+    --tag-bg: #f0f0f0;
+    --tag-border: #ddd;
+    --tag-text: #555;
+  }
+  [data-theme="dark"] {
+    --bg: #121212;
+    --card-bg: #1e1e1e;
+    --card-border: #2c2c2c;
+    --text-primary: #f0f0f0;
+    --text-secondary: #aaa;
+    --text-tertiary: #777;
+    --input-bg: #2a2a2a;
+    --input-field-bg: #f0f0f0;
+    --input-border: #3a3a3a;
+    --row-border: #2c2c2c;
+    --gray-bg: #2c2c2c;
+    --gray-text: #ccc;
+    --summary-bg: #252525;
+    --tab-bg: #252525;
+    --tag-bg: #2c2c2c;
+    --tag-border: #3a3a3a;
+    --tag-text: #ccc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); min-height: 100vh; transition: background .2s; }
+  .topbar { background: var(--cor-loja, #3a3f44); color: #fff; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-size: 16px; font-weight: 600; }
+  .topbar span { font-size: 12px; opacity: .8; }
+  .topbar-btns { display: flex; gap: 8px; }
+  .topbar-btn { background: rgba(255,255,255,0.2); border: none; color: #fff; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  .topbar-btn:hover { background: rgba(255,255,255,0.3); }
+  .container { max-width: 480px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--card-border); padding: 16px; margin-bottom: 12px; }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  input[type=password], input[type=text], input[type=color], textarea, select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--input-border); border-radius: 8px;
+    font-size: 14px; margin-bottom: 8px; background: var(--input-field-bg); font-family: inherit; color: #111;
+  }
+  input[type=color] { height: 42px; padding: 4px 8px; cursor: pointer; }
+  textarea { resize: vertical; min-height: 120px; line-height: 1.6; color: #111; }
+  input:focus, textarea:focus { outline: none; border-color: var(--cor-loja, #3a3f44); background: #fff; color: #111; }
+  label { font-size: 13px; color: var(--gray-text); display: block; margin-bottom: 4px; font-weight: 500; }
+  .label-hint { font-size: 11px; color: var(--text-tertiary); font-weight: normal; margin-left: 4px; }
+  .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: opacity .15s; }
+  .btn:active { opacity: .85; }
+  .btn-green { background: var(--cor-loja, #3a3f44); color: #fff; }
+  .btn-gray { background: var(--gray-bg); color: var(--gray-text); }
+  .btn-red { background: #dc3545; color: #fff; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .upload-area { border: 2px dashed #c8e6d8; border-radius: 12px; padding: 28px 16px; text-align: center; cursor: pointer; background: #f0faf6; transition: border-color .2s, background .2s; }
+  .upload-area:hover { border-color: var(--cor-loja, #3a3f44); }
+  .upload-area.drag-ativo { border-color: var(--cor-loja, #3a3f44); background: #e2f5ec; border-style: solid; }
+  .upload-area .icon { font-size: 40px; margin-bottom: 8px; }
+  .upload-area p { font-size: 14px; font-weight: 600; color: var(--cor-loja, #3a3f44); }
+  .upload-area span { font-size: 12px; color: #888; }
+  #file-input { display: none; }
+  .thumb-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-top: 12px; }
+  .thumb { aspect-ratio:1; border-radius:8px; background:#eee; overflow:hidden; position:relative; }
+  .thumb img { width:100%; height:100%; object-fit:cover; }
+  .thumb .num { position:absolute; top:3px; left:3px; background:var(--cor-loja,#3a3f44); color:#fff; font-size:10px; font-weight:700; border-radius:4px; padding:1px 5px; }
+  .thumb .remover {
+    position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%;
+    background:rgba(0,0,0,0.65); color:#fff; border:none; font-size:13px; font-weight:700;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; padding:0;
+  }
+  .thumb .remover:hover { background:#dc3545; }
+  .progress-bar { height:6px; background:#e0e0e0; border-radius:3px; overflow:hidden; margin: 8px 0 4px; }
+  .progress-fill { height:100%; background:var(--cor-loja,#3a3f44); border-radius:3px; transition:width .4s ease; }
+  .progress-label { display:flex; justify-content:space-between; font-size:12px; color:#888; }
+  .item-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--row-border); }
+  .item-row:last-child { border-bottom:none; }
+  .item-thumb { width:38px; height:38px; border-radius:8px; object-fit:cover; flex-shrink:0; background:#eee; }
+  .item-info { flex:1; min-width:0; }
+  .item-info .name { font-size:13px; font-weight:600; color: var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .item-info .detail { font-size:12px; color: var(--text-secondary); }
+  .badge { font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; flex-shrink:0; }
+  .badge-wait { background:#FFF3CD; color:#856404; }
+  .badge-proc { background:#D1ECF1; color:#0c5460; }
+  .badge-ok   { background:#D4EDDA; color:#155724; }
+  .badge-err  { background:#F8D7DA; color:#721c24; }
+  .btn-share {
+    background: #721c24; color: #fff; border: none; border-radius: 8px;
+    padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .btn-share:hover { opacity: .85; }
+  .summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+  .summary-box { background: var(--summary-bg); border-radius:10px; padding:12px 8px; text-align:center; }
+  .summary-box .num { font-size:22px; font-weight:700; }
+  .summary-box .lbl { font-size:11px; color: var(--text-secondary); margin-top:2px; }
+  .section { display:none; }
+  .section.active { display:block; }
+  .alert { padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:10px; line-height:1.5; }
+  .alert-info { background:#D1ECF1; color:#0c5460; border:1px solid #bee5eb; }
+  .alert-warn { background:#FFF3CD; color:#856404; border:1px solid #ffc107; }
+  .success-icon { width:60px; height:60px; border-radius:50%; background:#D4EDDA; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; font-size:30px; }
+  .update-banner {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;
+    background: #1a1a1a; color: #fff; padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+    transform: translateY(100%); transition: transform .3s ease;
+  }
+  .update-banner.show { transform: translateY(0); }
+  .update-banner span { font-size: 13px; flex: 1; }
+  .update-btn {
+    background: var(--cor-loja, #e91e8c); color: #fff; border: none;
+    border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+  }
+  .nav-tabs { display:flex; gap:4px; margin-bottom:16px; background: var(--tab-bg); border-radius:10px; padding:4px; }
+  .nav-tab { flex:1; padding:8px; border:none; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; background:transparent; color: var(--text-secondary); transition: all .15s; }
+  .nav-tab.active { background: var(--card-bg); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .preview-box { background:#ECE5DD; border-radius:10px; padding:14px; margin-top:8px; }
+  .preview-bubble { background:#DCF8C6; border-radius:10px 10px 2px 10px; padding:10px 12px; font-size:13px; line-height:1.7; color:#111; max-width:90%; margin-left:auto; white-space:pre-wrap; }
+  .color-picker-row { display:flex; gap:12px; align-items:flex-end; margin-bottom:8px; }
+  .color-preview-wrap {
+    position: relative; width: 56px; height: 56px; flex-shrink: 0; cursor: pointer;
+    border-radius: 12px; overflow: hidden; border: 2px solid var(--card-border);
+    display: block;
+  }
+  .color-preview-wrap input[type=color] {
+    position: absolute; top: -8px; left: -8px; width: 72px; height: 72px;
+    opacity: 0; cursor: pointer; padding: 0; margin: 0; border: none;
+  }
+  .color-preview-swatch {
+    position: absolute; inset: 0; background: var(--cor-loja, #3a3f44);
+    pointer-events: none; display: flex; align-items: center; justify-content: center;
+  }
+  .color-preview-swatch::after {
+    content: '🎨'; font-size: 20px; opacity: .85;
+  }
+  .tag-hint { display:inline-block; background: var(--tag-bg); border-radius:4px; padding:2px 6px; font-size:11px; color: var(--tag-text); margin:2px; cursor:pointer; border:1px solid var(--tag-border); }
+  .tag-hint:hover { filter: brightness(1.2); }
+  .plano-btn {
+    display:inline-block; background: var(--tag-bg); border-radius:10px; padding:14px 18px;
+    font-size:15px; font-weight:600; color: var(--tag-text); margin:0; cursor:pointer;
+    border:1.5px solid var(--tag-border); flex:1; text-align:center; min-width:90px;
+  }
+  .plano-btn:hover { filter: brightness(1.2); }
+  .plano-btn:active { transform: scale(0.97); }
+  .accordion-header {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none; padding: 4px 0;
+  }
+  .accordion-header .card-title { margin-bottom: 0; }
+  .accordion-arrow { font-size: 13px; color: var(--text-secondary); transition: transform 0.2s; }
+  .accordion-arrow.aberto { transform: rotate(180deg); }
+  .accordion-body { overflow: hidden; transition: max-height 0.25s ease; }
+  .accordion-body.fechado { max-height: 0 !important; }
+  .dropdown-custom { position: relative; user-select: none; }
+  .dropdown-selected {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card-bg); cursor: pointer; font-size: 14px;
+    color: var(--text-primary); transition: border-color .2s;
+  }
+  .dropdown-selected:hover { border-color: var(--cor-loja, #3a3f44); }
+  .dropdown-arrow { font-size: 11px; color: var(--text-secondary); transition: transform .2s; }
+  .dropdown-arrow.aberto { transform: rotate(180deg); }
+  .dropdown-opcoes {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  .dropdown-item {
+    padding: 12px 14px; font-size: 14px; color: var(--text-primary);
+    cursor: pointer; transition: background .15s;
+  }
+  .dropdown-item:hover { background: var(--tag-bg); }
+  .dropdown-item.ativo { font-weight: 600; color: #1D9E75; }
+  .switch-row { display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; }
+  .switch-row .switch-label { font-size:14px; color:var(--text-primary); font-weight:500; }
+  .switch { position:relative; display:inline-block; width:48px; height:26px; flex-shrink:0; }
+  .switch input { opacity:0; width:0; height:0; }
+  .switch-track {
+    position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
+    background-color:var(--gray-bg); border-radius:26px; transition:.2s;
+  }
+  .switch-track::before {
+    position:absolute; content:""; height:20px; width:20px; left:3px; bottom:3px;
+    background-color:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.3);
+  }
+  .switch input:checked + .switch-track { background-color:#1D9E75; }
+  .switch input:checked + .switch-track::before { transform:translateX(22px); }
+  .divider { height:1px; background: var(--row-border); margin:12px 0; }
+  .qr-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .qr-modal-box {
+    background: var(--card-bg); border-radius: 16px; padding: 20px; max-width: 360px; width: 100%;
+    text-align: center;
+  }
+  .qr-modal-box video {
+    width: 100%; border-radius: 12px; background: #000; max-height: 320px; object-fit: cover;
+  }
+  .qr-modal-status { font-size: 13px; color: var(--text-secondary); margin: 12px 0; min-height: 18px; }
+  .foto-fullscreen-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 2100;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    padding: 20px;
+  }
+  .foto-fullscreen-img { max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; }
+  .foto-fullscreen-fechar {
+    position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); color: #fff; border: none; font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .foto-fullscreen-nome {
+    color: #ddd; font-size: 13px; margin-bottom: 12px; text-align: center; max-width: 90%;
+    word-break: break-word;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+  <div>
+    <h1>ComproV</h1>
+    <span>Envio de Comprovantes</span>
+  </div>
+  <div class="topbar-btns">
+    <button class="topbar-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Alternar modo noturno">🌙</button>
+    <button class="topbar-btn" onclick="abrirHistorico()">📋 Histórico</button>
+    <button class="topbar-btn" onclick="setSection('sec-painel')">⚙️ Painel</button>
+    <button class="topbar-btn" onclick="setSection('sec-upload')">📸 Enviar</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ========== PAINEL ========== -->
+  <div class="section" id="sec-painel">
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="btn-tab-apis" onclick="showTab('tab-apis', this)">🔑 APIs</button>
+      <button class="nav-tab" onclick="showTab('tab-mensagem', this)">💬 Mensagem</button>
+      <button class="nav-tab" onclick="showTab('tab-loja', this)">🎨 Aparência</button>
+      <button class="nav-tab" onclick="showTab('tab-plano', this)">📦 Plano</button>
+    </div>
+
+    <!-- ABA APIs (ATIVAÇÃO POR CÓDIGO) -->
+    <div id="tab-apis">
+      <div class="card">
+        <div class="card-title">🔑 Ativar minha loja</div>
+        <label>Código de acesso <span class="label-hint">Digite o código que você recebeu</span></label>
+        <input type="text" id="codigo-acesso" placeholder="Ex: LOJA1234" autocomplete="off" data-lpignore="true" data-1p-ignore style="text-transform:uppercase" />
+        <div id="codigo-status" style="margin-top:10px; font-size:14px;"></div>
+      </div>
+      <button class="btn btn-green" id="btn-ativar" onclick="ativarPorCodigo()">🔓 Ativar</button>
+      <!-- Campos ocultos: o código preenche eles automaticamente (mantém o resto do app funcionando igual) -->
+      <input type="hidden" id="anthropic-key" />
+      <input type="hidden" id="evo-server" />
+      <input type="hidden" id="evo-instance" />
+      <input type="hidden" id="evo-apikey" />
+    </div>
+
+    <!-- ABA MENSAGEM -->
+    <div id="tab-mensagem" style="display:none">
+      <div class="card">
+        <div class="card-title">⏱️ Intervalo entre envios</div>
+        <div class="dropdown-custom" id="dropdown-intervalo" style="margin-top:8px;">
+          <div class="dropdown-selected" onclick="toggleDropdownIntervalo()">
+            <span id="dropdown-intervalo-label">⏱️ Automático (calculado pelo volume)</span>
+            <span class="dropdown-arrow">▼</span>
+          </div>
+          <div class="dropdown-opcoes" id="dropdown-intervalo-opcoes" style="display:none;">
+            <div class="dropdown-item" onclick="selecionarIntervalo('auto', '⏱️ Automático (calculado pelo volume)')">⏱️ Automático (calculado pelo volume)</div>
+            <div class="dropdown-item" onclick="selecionarIntervalo('3', '3 segundos')">3 segundos</div>
+            <div class="dropdown-item" onclick="selecionarIntervalo('5', '5 segundos')">5 segundos</div>
+            <div class="dropdown-item" onclick="selecionarIntervalo('8', '8 segundos')">8 segundos</div>
+            <div class="dropdown-item" onclick="selecionarIntervalo('10', '10 segundos')">10 segundos</div>
+            <div class="dropdown-item" onclick="selecionarIntervalo('15', '15 segundos')">15 segundos</div>
+          </div>
+        </div>
+        <!-- input oculto para manter compatibilidade com o restante do código -->
+        <input type="hidden" id="intervalo-envio" value="auto" />
+      </div>
+      <div class="card">
+        <div class="card-title">💬 Texto da mensagem</div>
+        <div class="alert alert-info" style="margin-bottom:12px;">
+          Use as variáveis abaixo para inserir dados da etiqueta automaticamente. Clique para inserir:
+          <div style="margin-top:8px;">
+            <span class="tag-hint" onclick="inserirTag('{nome}')">👤 {nome}</span>
+            <span class="tag-hint" onclick="inserirTag('{box}')">📦 {box}</span>
+            <span class="tag-hint" onclick="inserirTag('{setor}')">📍 {setor}</span>
+            <span class="tag-hint" onclick="inserirTag('{status}')">✅ {status}</span>
+          </div>
+        </div>
+        <label>Mensagem</label>
+        <textarea id="msg-template" placeholder="Digite sua mensagem..."></textarea>
+        <div class="divider"></div>
+        <label>Prévia</label>
+        <div class="preview-box">
+          <div class="preview-bubble" id="msg-preview">...</div>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="saveConfig()">💾 Salvar mensagem</button>
+      <button class="btn btn-gray" onclick="resetMensagem()">↩️ Restaurar padrão</button>
+
+      <div class="card" style="margin-top:12px;">
+        <div class="card-title">💵 Cobrar taxa de todos do lote</div>
+        <div class="alert alert-warn">Quando ativado, TODOS os comprovantes enviados neste lote recebem a mensagem de taxa com o valor abaixo — mesmo sem $ na etiqueta. Use para excursões onde toda a remessa paga a mesma taxa.</div>
+        <div class="switch-row">
+          <span class="switch-label">Ativar cobrança de taxa para todos</span>
+          <label class="switch">
+            <input type="checkbox" id="taxa-todos-toggle" onchange="toggleCampoTaxaTodos()" />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <div id="campo-taxa-todos-valor" style="display:none; margin-top:10px;">
+          <label>Valor da taxa para todos (R$)</label>
+          <input type="text" id="taxa-todos-valor" placeholder="5.00" inputmode="decimal" />
+        </div>
+        <button class="btn btn-green" onclick="salvarTaxaTodos()" style="margin-top:10px;">💾 Salvar cobrança para todos</button>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <div class="card-title">💰 Dados do PIX (taxa de excursão)</div>
+        <div class="alert alert-info">Esses dados aparecem automaticamente na mensagem quando a etiqueta tiver $ ou $$, ou quando a cobrança para todos estiver ativada.</div>
+        <label>Chave PIX</label>
+        <input type="text" id="pix-chave" placeholder="Sua Chave PIX" />
+        <label>Nome do titular</label>
+        <input type="text" id="pix-nome" placeholder="Nome completo" />
+        <label>Banco / Carteira <span class="label-hint">opcional</span></label>
+        <input type="text" id="pix-banco" placeholder="Mercado Pago" />
+      </div>
+      <button class="btn btn-green" onclick="saveConfig()">💾 Salvar PIX</button>
+    </div>
+
+    <!-- ABA APARÊNCIA -->
+    <div id="tab-loja" style="display:none">
+      <div class="card">
+        <div class="card-title">🎨 Cor principal</div>
+        <div class="color-picker-row">
+          <label for="cor-picker" class="color-preview-wrap" title="Toque para escolher a cor">
+            <input type="color" id="cor-picker" value="#3a3f44" oninput="syncCor(this.value)" />
+            <span class="color-preview-swatch" id="cor-preview-swatch"></span>
+          </label>
+          <div style="flex:1;">
+            <label>Código da cor</label>
+            <input type="text" id="cor-hex" placeholder="#3a3f44" />
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+          <span class="tag-hint" style="background:#3a3f44;color:#fff;border-color:#3a3f44" onclick="setCor('#3a3f44')">Chumbo</span>
+          <span class="tag-hint" style="background:#1D9E75;color:#fff;border-color:#1D9E75" onclick="setCor('#1D9E75')">Verde</span>
+          <span class="tag-hint" style="background:#e91e8c;color:#fff;border-color:#e91e8c" onclick="setCor('#e91e8c')">Rosa</span>
+          <span class="tag-hint" style="background:#6c3fc5;color:#fff;border-color:#6c3fc5" onclick="setCor('#6c3fc5')">Roxo</span>
+          <span class="tag-hint" style="background:#e65c00;color:#fff;border-color:#e65c00" onclick="setCor('#e65c00')">Laranja</span>
+          <span class="tag-hint" style="background:#1565c0;color:#fff;border-color:#1565c0" onclick="setCor('#1565c0')">Azul</span>
+          <span class="tag-hint" style="background:#333;color:#fff;border-color:#333" onclick="setCor('#333333')">Preto</span>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="saveConfig()">💾 Salvar aparência</button>
+    </div>
+
+    <!-- ABA PLANO -->
+    <div id="tab-plano" style="display:none">
+      <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div class="card-title" style="margin-bottom:0;">📦 Limite de envios mensal</div>
+          <button id="btn-lapis-limite" onclick="destrancarLimite()" style="display:none; background:none; border:none; cursor:pointer; font-size:18px; padding:4px 8px; line-height:1; border-radius:8px;" title="Editar limite">✏️</button>
+        </div>
+
+        <!-- Visualização travada (limite já definido) -->
+        <div id="limite-travado-view" style="display:none; margin-top:12px;">
+          <div style="text-align:center; padding:12px 0;">
+            <div style="font-size:13px; color:var(--text-secondary); margin-bottom:4px;">Plano Atual</div>
+            <div style="font-size:28px; font-weight:700; color:var(--text-primary);" id="limite-travado-valor">150</div>
+            <div style="font-size:12px; color:var(--text-secondary);">comprovantes por mês</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:8px;" id="ciclo-travado-info"></div>
+          </div>
+        </div>
+
+        <!-- Visualização editável (sem limite ainda, ou após destrancar) -->
+        <div id="limite-edicao-view" style="margin-top:12px;">
+          <div class="accordion-header" onclick="toggleAccordion('accordion-planos', this)" style="margin-bottom:8px;">
+            <label style="margin:0; cursor:pointer;">Plano <span class="label-hint">toque para ver os planos</span></label>
+            <span class="accordion-arrow">▼</span>
+          </div>
+          <div class="accordion-body fechado" id="accordion-planos" style="max-height:0;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; padding-top:4px;">
+              <span class="plano-btn" onclick="setLimitePlano(300)">Básico<br><span style="font-size:11px; font-weight:400; opacity:0.7;">300 envios</span></span>
+              <span class="plano-btn" onclick="setLimitePlano(600)">Intermediário<br><span style="font-size:11px; font-weight:400; opacity:0.7;">600 envios</span></span>
+              <span class="plano-btn" onclick="setLimitePlano(1000)">Avançado<br><span style="font-size:11px; font-weight:400; opacity:0.7;">1000 envios</span></span>
+            </div>
+          </div>
+          <label>Limite mensal de envios <span class="label-hint">digite 0 para ilimitado</span></label>
+          <input type="text" id="limite-mensal" placeholder="" inputmode="numeric" />
+          <label>Dia do ciclo de cobrança <span class="label-hint">dia em que o cliente assinou</span></label>
+          <input type="text" id="dia-ciclo" placeholder="ex: 12" inputmode="numeric" />
+          <button class="btn btn-green" onclick="salvarLimiteMensal()">💾 Salvar limite</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 Uso deste mês</div>
+        <div id="uso-mensal-resumo" style="text-align:center; padding:8px 0;">
+          <div style="font-size:32px; font-weight:700; color:var(--text-primary);" id="uso-mensal-numero">0</div>
+          <div style="font-size:13px; color:var(--text-secondary);" id="uso-mensal-label">comprovantes enviados</div>
+        </div>
+        <div class="progress-bar" style="margin-top:8px;">
+          <div class="progress-fill" id="uso-mensal-barra" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== UPLOAD ========== -->
+  <div class="section active" id="sec-upload">
+    <div class="card">
+      <div class="card-title">📸 Selecionar fotos</div>
+      <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+        <div class="icon">📸</div>
+        <p>Toque para selecionar as fotos</p>
+        <span>Pode selecionar várias de uma vez, ou arrastar para aqui</span>
+      </div>
+      <input type="file" id="file-input" accept="image/*" multiple onchange="onFilesSelected(this.files)">
+      <div id="aviso-taxa-todos" class="alert alert-warn" style="display:none; margin-top:12px;"></div>
+      <div class="thumb-grid" id="thumb-grid"></div>
+      <div class="alert alert-warn" id="aviso-intervalo" style="display:none; margin-top:12px;"></div>
+    </div>
+    <button class="btn btn-green" id="btn-send" onclick="startProcessing()" disabled>📲 Ler e enviar comprovantes</button>
+  </div>
+
+  <!-- ========== PROCESSANDO ========== -->
+  <div class="section" id="sec-processing">
+    <div id="aviso-segundo-plano" class="alert alert-warn" style="display:none; margin-bottom:12px;">
+      ⏸️ <b>O app foi pra segundo plano!</b> O envio pode pausar enquanto você estiver em outro aplicativo. Volte pra esta tela para garantir que continue enviando.
+    </div>
+    <div class="card">
+      <div class="card-title">📤 Enviando comprovantes...</div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="progress-label">
+        <span id="prog-text">Iniciando...</span>
+        <span id="prog-pct">0%</span>
+      </div>
+      <div id="items-list" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- ========== CONCLUÍDO ========== -->
+  <div class="section" id="sec-done">
+    <div class="card" style="text-align:center; padding:24px 16px;">
+      <div class="success-icon">✅</div>
+      <p style="font-size:17px; font-weight:700; color:var(--text-primary);">Lote concluído!</p>
+      <p style="font-size:13px; color:#888; margin-top:4px;">Comprovantes enviados com foto no WhatsApp</p>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-box"><div class="num" id="s-total" style="color:var(--text-primary)">0</div><div class="lbl">Total</div></div>
+      <div class="summary-box"><div class="num" id="s-ok" style="color:var(--cor-loja,#3a3f44)">0</div><div class="lbl">Enviados</div></div>
+      <div class="summary-box"><div class="num" id="s-err" style="color:#dc3545">0</div><div class="lbl">Erros</div></div>
+    </div>
+    <div class="card" id="done-list"></div>
+    <button class="btn btn-green" onclick="resetApp()">📸 Novo lote</button>
+  </div>
+
+  <!-- ========== HISTÓRICO ========== -->
+  <div class="section" id="sec-historico">
+    <div class="card-title" style="margin-bottom:12px;">📋 Histórico de lotes enviados</div>
+    <div id="historico-lista"></div>
+    <button class="btn btn-gray" onclick="limparHistorico()" style="margin-top:8px">🗑️ Limpar histórico</button>
+    <button class="btn btn-gray" onclick="setSection('sec-upload')" style="margin-top:8px">📸 Voltar a enviar</button>
+  </div>
+
+</div>
+
+<script>
+const MSG_PADRAO = `Olá {nome}, Seu pacote foi entregue! ✅`;
+
+const MSG_TAXA = `Olá, *{nome}*! Seu pacote foi entregue! ✅
+
+💵 Taxa cobrada pela Excursão: *R$ {taxa}*
+
+PIX: {pix_chave}
+Nome: {pix_nome}
+{pix_banco}`;
+
+let selectedFiles = [];
+let dadosLidos = [];
+
+// ===== CONFIG =====
+function saveConfig() {
+  localStorage.setItem('anthropic_key', document.getElementById('anthropic-key').value.trim());
+  localStorage.setItem('evo_server',    document.getElementById('evo-server').value.trim().replace(/^https?:\/\//, '').replace(/\/$/, ''));
+  localStorage.setItem('evo_instance',  document.getElementById('evo-instance').value.trim());
+  localStorage.setItem('evo_apikey',    document.getElementById('evo-apikey').value.trim());
+  const intervaloTexto = document.getElementById('intervalo-envio').value.trim().toLowerCase();
+  if (intervaloTexto === '' || intervaloTexto === 'auto') {
+    localStorage.setItem('intervalo_envio', 'auto');
+  } else {
+    const intervaloVal = parseInt(intervaloTexto, 10);
+    localStorage.setItem('intervalo_envio', isNaN(intervaloVal) || intervaloVal < 0 ? 'auto' : String(intervaloVal));
+  }
+  localStorage.setItem('msg_template',  document.getElementById('msg-template').value);
+  localStorage.setItem('taxa_todos_ativa', document.getElementById('taxa-todos-toggle').checked ? '1' : '0');
+  const taxaTodosVal = document.getElementById('taxa-todos-valor').value.trim().replace(',', '.');
+  localStorage.setItem('taxa_todos_valor', taxaTodosVal);
+  localStorage.setItem('pix_chave',     document.getElementById('pix-chave').value.trim());
+  localStorage.setItem('pix_nome',      document.getElementById('pix-nome').value.trim());
+  localStorage.setItem('pix_banco',     document.getElementById('pix-banco').value.trim());
+  localStorage.setItem('cor_loja',      document.getElementById('cor-hex').value.trim());
+  aplicarAparencia();
+  atualizarVisibilidadeAbaApis();
+  mostrarAvisoCustomizado('Configurações salvas!', '✅');
+}
+
+// ===== ATIVAÇÃO POR CÓDIGO ÚNICO =====
+const COMPROV_BACKEND = 'https://app.comprov.cloud';
+
+async function ativarPorCodigo() {
+  const campo = document.getElementById('codigo-acesso');
+  const status = document.getElementById('codigo-status');
+  const btn = document.getElementById('btn-ativar');
+  const codigo = campo.value.trim().toUpperCase();
+
+  if (!codigo) {
+    status.innerHTML = '<span style="color:#c0392b">Digite o código de acesso.</span>';
+    return;
+  }
+
+  btn.disabled = true;
+  const textoOriginal = btn.innerHTML;
+  btn.innerHTML = '⏳ Ativando...';
+  status.innerHTML = '<span style="color:#888">Verificando o código...</span>';
+
+  try {
+    const resp = await fetch(`${COMPROV_BACKEND}/config/${encodeURIComponent(codigo)}`);
+
+    if (resp.status === 404) {
+      status.innerHTML = '<span style="color:#c0392b">Código não encontrado. Confira e tente de novo.</span>';
+      return;
+    }
+    if (resp.status === 403) {
+      status.innerHTML = '<span style="color:#c0392b">Assinatura inativa. Entre em contato com o suporte.</span>';
+      return;
+    }
+    if (!resp.ok) {
+      status.innerHTML = '<span style="color:#c0392b">Erro ao ativar. Tente novamente em instantes.</span>';
+      return;
+    }
+
+    const cfg = await resp.json();
+
+    // Salva as 4 informações nos mesmos lugares que o app já usa
+    const servidor = (cfg.evolution_url || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+    localStorage.setItem('anthropic_key', cfg.anthropic_key || '');
+    localStorage.setItem('evo_server',    servidor);
+    localStorage.setItem('evo_instance',  cfg.instancia || '');
+    localStorage.setItem('evo_apikey',    cfg.instancia_token || '');
+    localStorage.setItem('codigo_acesso', codigo);
+
+    // Atualiza os campos ocultos também
+    document.getElementById('anthropic-key').value = cfg.anthropic_key || '';
+    document.getElementById('evo-server').value    = servidor;
+    document.getElementById('evo-instance').value  = cfg.instancia || '';
+    document.getElementById('evo-apikey').value    = cfg.instancia_token || '';
+
+    limparErroDeApi();
+    atualizarVisibilidadeAbaApis();
+    status.innerHTML = '<span style="color:#1e8449">✅ Loja ativada com sucesso!</span>';
+
+    const nome = cfg.nome_loja ? ` (${cfg.nome_loja})` : '';
+    setTimeout(() => {
+      mostrarAvisoCustomizado(`Loja ativada com sucesso${nome}! Agora é só enviar seus comprovantes.`, '✅');
+      setSection('sec-upload');
+    }, 600);
+
+  } catch (e) {
+    status.innerHTML = '<span style="color:#c0392b">Erro de conexão. Verifique sua internet e tente de novo.</span>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = textoOriginal;
+  }
+}
+
+function loadConfig() {
+  document.getElementById('anthropic-key').value = localStorage.getItem('anthropic_key') || '';
+  document.getElementById('evo-server').value    = localStorage.getItem('evo_server') || '';
+  document.getElementById('evo-instance').value  = localStorage.getItem('evo_instance') || '';
+  document.getElementById('evo-apikey').value    = localStorage.getItem('evo_apikey') || '';
+  document.getElementById('codigo-acesso').value = localStorage.getItem('codigo_acesso') || '';
+  const intervaloSalvo = localStorage.getItem('intervalo_envio') || 'auto';
+  document.getElementById('intervalo-envio').value = intervaloSalvo;
+  setIntervalo(intervaloSalvo);
+  document.getElementById('msg-template').value      = localStorage.getItem('msg_template') || MSG_PADRAO;
+  document.getElementById('taxa-todos-toggle').checked = localStorage.getItem('taxa_todos_ativa') === '1';
+  document.getElementById('taxa-todos-valor').value    = localStorage.getItem('taxa_todos_valor') || '';
+  toggleCampoTaxaTodos();
+  document.getElementById('pix-chave').value         = localStorage.getItem('pix_chave') || '';
+  document.getElementById('pix-nome').value          = localStorage.getItem('pix_nome') || '';
+  document.getElementById('pix-banco').value         = localStorage.getItem('pix_banco') || '';
+  document.getElementById('limite-mensal').value     = localStorage.getItem('limite_mensal') || '';
+  atualizarResumoUsoMensal();
+  document.getElementById('cor-hex').value           = localStorage.getItem('cor_loja') || '#3a3f44';
+  document.getElementById('cor-picker').value        = localStorage.getItem('cor_loja') || '#3a3f44';
+  aplicarAparencia();
+  atualizarPreview();
+  atualizarVisibilidadeAbaApis();
+}
+
+// ===== OCULTAR ABA APIS: esconde quando configurado e funcionando, reaparece se der erro =====
+function todasChavesPreenchidas() {
+  return !!(
+    localStorage.getItem('anthropic_key') &&
+    localStorage.getItem('evo_server') &&
+    localStorage.getItem('evo_instance') &&
+    localStorage.getItem('evo_apikey')
+  );
+}
+
+function atualizarVisibilidadeAbaApis() {
+  const btn = document.getElementById('btn-tab-apis');
+  if (!btn) return;
+  const houveErroRecente = localStorage.getItem('apis_erro_recente') === '1';
+  const devesEsconder = todasChavesPreenchidas() && !houveErroRecente;
+  btn.style.display = devesEsconder ? 'none' : 'block';
+
+  // Se a aba APIs estava sendo exibida e agora foi escondida, troca para "Mensagem"
+  // pra não deixar a tela em branco
+  const tabApisVisivel = document.getElementById('tab-apis').style.display !== 'none';
+  if (devesEsconder && tabApisVisivel) {
+    const btnMensagem = document.querySelector('.nav-tab[onclick*="tab-mensagem"]');
+    if (btnMensagem) showTab('tab-mensagem', btnMensagem);
+  }
+}
+
+function marcarErroDeApi() {
+  localStorage.setItem('apis_erro_recente', '1');
+  atualizarVisibilidadeAbaApis();
+}
+
+function limparErroDeApi() {
+  localStorage.removeItem('apis_erro_recente');
+  atualizarVisibilidadeAbaApis();
+}
+
+function aplicarAparencia() {
+  const cor = localStorage.getItem('cor_loja') || '#3a3f44';
+  document.documentElement.style.setProperty('--cor-loja', cor);
+  const metaTheme = document.getElementById('meta-theme-color');
+  if (metaTheme) metaTheme.setAttribute('content', cor);
+}
+
+function resetMensagem() {
+  document.getElementById('msg-template').value = MSG_PADRAO;
+  atualizarPreview();
+}
+
+function toggleCampoTaxaTodos() {
+  const ativado = document.getElementById('taxa-todos-toggle').checked;
+  document.getElementById('campo-taxa-todos-valor').style.display = ativado ? 'block' : 'none';
+}
+
+function salvarTaxaTodos() {
+  const ativado = document.getElementById('taxa-todos-toggle').checked;
+  localStorage.setItem('taxa_todos_ativa', ativado ? '1' : '0');
+  const valorTexto = document.getElementById('taxa-todos-valor').value.trim().replace(',', '.');
+  if (ativado && (!valorTexto || isNaN(parseFloat(valorTexto)))) {
+    mostrarAvisoCustomizado('Digite um valor válido para a taxa antes de ativar a cobrança para todos.', '⚠️');
+    return;
+  }
+  localStorage.setItem('taxa_todos_valor', valorTexto);
+  atualizarAvisoTaxaTodos();
+  mostrarAvisoCustomizado(ativado ? 'Cobrança de taxa para todos ativada!' : 'Cobrança de taxa para todos desativada.', '✅');
+}
+
+function syncCor(val) {
+  document.getElementById('cor-hex').value = val;
+}
+
+function setCor(hex) {
+  document.getElementById('cor-hex').value = hex;
+  document.getElementById('cor-picker').value = hex;
+}
+
+function setIntervalo(valor) {
+  const labels = {
+    'auto': '⏱️ Automático (calculado pelo volume)',
+    '3': '3 segundos', '5': '5 segundos', '8': '8 segundos',
+    '10': '10 segundos', '15': '15 segundos'
+  };
+  const input = document.getElementById('intervalo-envio');
+  if (input) input.value = valor;
+  const label = document.getElementById('dropdown-intervalo-label');
+  if (label) label.textContent = labels[valor] || valor + ' segundos';
+  // Marca o item ativo visualmente
+  document.querySelectorAll('#dropdown-intervalo-opcoes .dropdown-item').forEach(el => {
+    el.classList.toggle('ativo', el.dataset.valor === valor);
+  });
+}
+
+function toggleDropdownIntervalo() {
+  const opcoes = document.getElementById('dropdown-intervalo-opcoes');
+  const arrow = document.querySelector('#dropdown-intervalo .dropdown-arrow');
+  const aberto = opcoes.style.display === 'block';
+  opcoes.style.display = aberto ? 'none' : 'block';
+  if (arrow) arrow.classList.toggle('aberto', !aberto);
+  // Fecha ao clicar fora
+  if (!aberto) {
+    setTimeout(() => {
+      document.addEventListener('click', function fechar(e) {
+        if (!document.getElementById('dropdown-intervalo').contains(e.target)) {
+          opcoes.style.display = 'none';
+          if (arrow) arrow.classList.remove('aberto');
+          document.removeEventListener('click', fechar);
+        }
+      });
+    }, 10);
+  }
+}
+
+function selecionarIntervalo(valor, texto) {
+  const input = document.getElementById('intervalo-envio');
+  if (input) input.value = valor;
+  const label = document.getElementById('dropdown-intervalo-label');
+  if (label) label.textContent = texto;
+  // Fecha o dropdown
+  document.getElementById('dropdown-intervalo-opcoes').style.display = 'none';
+  const arrow = document.querySelector('#dropdown-intervalo .dropdown-arrow');
+  if (arrow) arrow.classList.remove('aberto');
+  // Marca item ativo
+  document.querySelectorAll('#dropdown-intervalo-opcoes .dropdown-item').forEach(el => {
+    el.classList.toggle('ativo', el.textContent.trim() === texto);
+  });
+  // Salva
+  salvarIntervalo(valor);
+}
+
+function salvarIntervalo(valor) {
+  localStorage.setItem('intervalo_envio', valor);
+}
+
+function toggleAccordion(id, header) {
+  const body = document.getElementById(id);
+  const arrow = header.querySelector('.accordion-arrow');
+  const aberto = !body.classList.contains('fechado');
+  if (aberto) {
+    body.style.maxHeight = '0';
+    body.classList.add('fechado');
+    if (arrow) arrow.classList.remove('aberto');
+  } else {
+    body.classList.remove('fechado');
+    body.style.maxHeight = body.scrollHeight + 'px';
+    if (arrow) arrow.classList.add('aberto');
+  }
+}
+
+function setLimitePlano(valor) {
+  document.getElementById('limite-mensal').value = valor;
+}
+
+function inserirTag(tag) {
+  const el = document.getElementById('msg-template');
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const text = el.value;
+  el.value = text.slice(0, start) + tag + text.slice(end);
+  el.selectionStart = el.selectionEnd = start + tag.length;
+  el.focus();
+  atualizarPreview();
+}
+
+function atualizarPreview() {
+  const tpl = document.getElementById('msg-template').value;
+  const preview = tpl
+    .replace(/{nome}/g, 'Tarsila Beckman')
+    .replace(/{box}/g, '153')
+    .replace(/{setor}/g, 'Verde / Calçadão - Rua B')
+    .replace(/{status}/g, 'PAGO');
+  document.getElementById('msg-preview').textContent = preview;
+}
+
+document.getElementById('msg-template').addEventListener('input', atualizarPreview);
+document.getElementById('cor-hex').addEventListener('input', function() {
+  if (this.value.match(/^#[0-9A-Fa-f]{6}$/)) {
+    document.getElementById('cor-picker').value = this.value;
+  }
+});
+
+// ===== NAVEGAÇÃO =====
+function setSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'sec-upload') atualizarAvisoTaxaTodos();
+}
+
+function atualizarAvisoTaxaTodos() {
+  const aviso = document.getElementById('aviso-taxa-todos');
+  if (!aviso) return;
+  const ativa = localStorage.getItem('taxa_todos_ativa') === '1';
+  const valor = localStorage.getItem('taxa_todos_valor');
+  if (ativa && valor) {
+    aviso.style.display = 'block';
+    aviso.innerHTML = `💵 <b>Cobrança de taxa ativada para todos!</b> Todos os comprovantes deste lote vão receber a mensagem de taxa de <b>R$ ${parseFloat(valor).toFixed(2)}</b>, mesmo sem $ na etiqueta. Desative em ⚙️ Painel → Mensagem se não for o caso.`;
+  } else {
+    aviso.style.display = 'none';
+  }
+}
+
+function showTab(id, btn) {
+  document.querySelectorAll('#sec-painel [id^=tab-]').forEach(t => t.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (id === 'tab-plano') atualizarResumoUsoMensal();
+}
+
+// ===== UPLOAD =====
+function calcularIntervaloRecomendado(qtd) {
+  if (qtd <= 20) return 4;
+  if (qtd <= 50) return 6;
+  return 10;
+}
+
+function onFilesSelected(files) {
+  selectedFiles = Array.from(files);
+  renderThumbGrid();
+  document.getElementById('btn-send').disabled = selectedFiles.length === 0;
+  atualizarAvisoIntervalo();
+}
+
+// ===== DRAG AND DROP: permite arrastar fotos do computador direto para a área de upload =====
+// Útil principalmente no PC, onde não existe seletor de "Galeria" como no celular.
+(function configurarDragAndDrop() {
+  const area = document.getElementById('upload-area');
+  if (!area) return;
+
+  ['dragenter', 'dragover'].forEach(evento => {
+    area.addEventListener(evento, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      area.classList.add('drag-ativo');
+    });
+  });
+
+  ['dragleave', 'dragend'].forEach(evento => {
+    area.addEventListener(evento, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      area.classList.remove('drag-ativo');
+    });
+  });
+
+  area.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    area.classList.remove('drag-ativo');
+
+    const arquivosSoltos = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (arquivosSoltos.length === 0) return;
+
+    // Acrescenta às fotos já selecionadas, em vez de substituir — mesmo comportamento
+    // esperado de quem está organizando um lote grande aos poucos
+    selectedFiles = selectedFiles.concat(arquivosSoltos);
+    renderThumbGrid();
+    document.getElementById('btn-send').disabled = selectedFiles.length === 0;
+    atualizarAvisoIntervalo();
+  });
+})();
+
+// ===== COMPARTILHAMENTO: recebe fotos compartilhadas de outros apps (Galeria, Google Fotos, etc) =====
+async function verificarFotosCompartilhadas() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('compartilhado') !== '1') return;
+
+  // Limpa o parâmetro da URL pra não tentar carregar de novo se a página recarregar
+  window.history.replaceState({}, '', window.location.pathname);
+
+  try {
+    const db = await abrirBancoCompartilhamentoApp();
+    const tx = db.transaction('fotos', 'readwrite');
+    const store = tx.objectStore('fotos');
+    const arquivos = await new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    await store.clear();
+
+    if (arquivos && arquivos.length > 0) {
+      onFilesSelected(arquivos);
+      setSection('sec-upload');
+    }
+  } catch (e) {
+    console.log('Nenhuma foto compartilhada encontrada:', e.message);
+  }
+}
+
+function abrirBancoCompartilhamentoApp() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('comprovai-share', 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore('fotos', { autoIncrement: true });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function renderThumbGrid() {
+  const grid = document.getElementById('thumb-grid');
+  grid.innerHTML = '';
+
+  // Constrói tudo numa string só (muito mais rápido que grid.innerHTML += dentro do loop,
+  // que reconstrói o HTML inteiro a cada iteração e trava com muitos itens)
+  let htmlPartes = [];
+  selectedFiles.forEach((f, i) => {
+    htmlPartes.push(`
+      <div class="thumb" id="thumb-item-${i}">
+        <img id="thumb-img-${i}" src="" loading="lazy" onclick="abrirFotoEmTelaCheia(${i})" style="cursor:pointer;">
+        <span class="num">${i+1}</span>
+        <button class="remover" onclick="removerFoto(${i})" title="Remover esta foto">✕</button>
+      </div>`);
+  });
+  grid.innerHTML = htmlPartes.join('');
+
+  // Gera as miniaturas em tamanho reduzido (não a foto original em alta resolução),
+  // de forma assíncrona e em pequenos lotes, para não travar a tela com muitas fotos
+  gerarMiniaturasEmLotes();
+}
+
+async function gerarMiniaturasEmLotes() {
+  const TAMANHO_LOTE = 8;
+  for (let i = 0; i < selectedFiles.length; i += TAMANHO_LOTE) {
+    const lote = selectedFiles.slice(i, i + TAMANHO_LOTE);
+    await Promise.all(lote.map((file, idx) => gerarMiniatura(file, i + idx)));
+    // Pequena pausa entre lotes para o navegador "respirar" e não travar a interface
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+}
+
+// Abre a foto original (não a miniatura reduzida) em tela cheia para conferência
+function abrirFotoEmTelaCheia(index) {
+  const file = selectedFiles[index];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+  const overlay = document.createElement('div');
+  overlay.className = 'foto-fullscreen-overlay';
+  overlay.innerHTML = `
+    <button class="foto-fullscreen-fechar" id="foto-fechar">✕</button>
+    <div class="foto-fullscreen-nome">${index + 1} de ${selectedFiles.length} · ${file.name}</div>
+    <img src="${url}" class="foto-fullscreen-img" />
+  `;
+  document.body.appendChild(overlay);
+
+  function fechar() {
+    URL.revokeObjectURL(url);
+    overlay.remove();
+  }
+
+  overlay.querySelector('#foto-fechar').addEventListener('click', fechar);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) fechar();
+  });
+}
+
+function gerarMiniatura(file, index) {
+  return new Promise((resolve) => {
+    const imgEl = document.getElementById('thumb-img-' + index);
+    if (!imgEl) { resolve(); return; }
+
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const TAMANHO_MAX = 220; // miniatura um pouco maior, ainda leve o suficiente para não travar
+      const canvas = document.createElement('canvas');
+      const escala = Math.min(1, TAMANHO_MAX / Math.max(img.width, img.height));
+      canvas.width = Math.round(img.width * escala);
+      canvas.height = Math.round(img.height * escala);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      imgEl.src = canvas.toDataURL('image/jpeg', 0.75);
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    img.src = url;
+  });
+}
+
+function removerFoto(i) {
+  selectedFiles.splice(i, 1);
+  renderThumbGrid();
+  document.getElementById('btn-send').disabled = selectedFiles.length === 0;
+  atualizarAvisoIntervalo();
+}
+
+function atualizarAvisoIntervalo() {
+  const aviso = document.getElementById('aviso-intervalo');
+  if (!aviso) return;
+  const qtd = selectedFiles.length;
+  if (qtd === 0) { aviso.style.display = 'none'; return; }
+
+  const segundos = calcularIntervaloRecomendado(qtd);
+  const tempoTotalSeg = (qtd - 1) * segundos;
+  const minutos = Math.floor(tempoTotalSeg / 60);
+  const segs = tempoTotalSeg % 60;
+  const tempoTexto = minutos > 0 ? `${minutos}min ${segs}s` : `${segs}s`;
+
+  aviso.style.display = 'block';
+  aviso.innerHTML = `⏱️ <b>${qtd} etiqueta${qtd > 1 ? 's' : ''}</b> selecionada${qtd > 1 ? 's' : ''} · intervalo de <b>${segundos}s</b> entre envios · tempo estimado: <b>${tempoTexto}</b>`;
+}
+
+// ===== PROCESSAMENTO =====
+function updateProgress(done, total) {
+  const pct = Math.round((done / total) * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('prog-text').textContent = done < total ? `Processando ${done+1} de ${total}...` : 'Concluído!';
+}
+
+function renderItems(items) {
+  document.getElementById('items-list').innerHTML = items.map((it, i) => `
+    <div class="item-row">
+      <img class="item-thumb" src="${it.previewUrl}" />
+      <div class="item-info">
+        <div class="name" id="iname-${i}">${it.file.name}</div>
+        <div class="detail" id="idetail-${i}">Aguardando...</div>
+      </div>
+      <span class="badge badge-wait" id="ibadge-${i}">Fila</span>
+    </div>`).join('');
+}
+
+function updateItem(i, nome, detail, badge, badgeClass) {
+  const n = document.getElementById('iname-'+i);
+  const d = document.getElementById('idetail-'+i);
+  const b = document.getElementById('ibadge-'+i);
+  if(n) n.textContent = nome;
+  if(d) d.textContent = detail;
+  if(b) { b.textContent = badge; b.className = 'badge ' + badgeClass; }
+}
+
+// ===== WAKE LOCK: mantém o app ativo enquanto a tela estiver aberta =====
+let wakeLockAtivo = null;
+
+async function pedirWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLockAtivo = await navigator.wakeLock.request('screen');
+      wakeLockAtivo.addEventListener('release', () => { wakeLockAtivo = null; });
+    }
+  } catch (e) {
+    console.log('Wake Lock não disponível neste dispositivo:', e.message);
+  }
+}
+
+function liberarWakeLock() {
+  if (wakeLockAtivo) {
+    wakeLockAtivo.release().catch(() => {});
+    wakeLockAtivo = null;
+  }
+}
+
+// Se o app voltou a ficar visível e ainda estamos processando, repede o Wake Lock
+// (o sistema sempre libera o lock automaticamente ao trocar de app)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && loteEmAndamento) {
+    pedirWakeLock();
+    mostrarAvisoVoltouAtivo();
+  } else if (document.visibilityState === 'hidden' && loteEmAndamento) {
+    mostrarAvisoSegundoPlano();
+  }
+});
+
+let loteEmAndamento = false;
+
+function mostrarAvisoSegundoPlano() {
+  const banner = document.getElementById('aviso-segundo-plano');
+  if (banner) banner.style.display = 'block';
+}
+
+function mostrarAvisoVoltouAtivo() {
+  const banner = document.getElementById('aviso-segundo-plano');
+  if (banner) banner.style.display = 'none';
+}
+
+// Mostra um aviso em modal próprio do app, sem o cabeçalho padrão do navegador
+// (diferente do alert() nativo, que sempre exibe "site diz" em cima da mensagem)
+function mostrarAvisoCustomizado(texto, icone) {
+  const overlay = document.createElement('div');
+  overlay.className = 'qr-modal-overlay';
+  overlay.innerHTML = `
+    <div class="qr-modal-box">
+      <div style="font-size:32px; margin-bottom:8px;">${icone || '⚠️'}</div>
+      <p style="font-size:14px; color:var(--text-primary); line-height:1.6; margin-bottom:16px;">${texto}</p>
+      <button class="btn btn-green" id="aviso-custom-ok">OK</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#aviso-custom-ok').addEventListener('click', () => overlay.remove());
+}
+
+// Confirmação customizada (Sim/Não), sem o rascunho padrão do navegador.
+// Recebe um callback que é chamado com true (confirmou) ou false (cancelou).
+function confirmarCustomizado(texto, callback, icone) {
+  const overlay = document.createElement('div');
+  overlay.className = 'qr-modal-overlay';
+  overlay.innerHTML = `
+    <div class="qr-modal-box">
+      <div style="font-size:32px; margin-bottom:8px;">${icone || '❓'}</div>
+      <p style="font-size:14px; color:var(--text-primary); line-height:1.6; margin-bottom:16px;">${texto}</p>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-gray" id="confirm-custom-nao" style="flex:1;">Cancelar</button>
+        <button class="btn btn-green" id="confirm-custom-sim" style="flex:1;">Confirmar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#confirm-custom-sim').addEventListener('click', () => { overlay.remove(); callback(true); });
+  overlay.querySelector('#confirm-custom-nao').addEventListener('click', () => { overlay.remove(); callback(false); });
+}
+
+// Mesma confirmação customizada, porém em formato de Promise — permite usar com
+// "await", mantendo o código sequencial legível em vez de aninhar callbacks.
+function confirmarCustomizadoAsync(texto, icone) {
+  return new Promise((resolve) => {
+    confirmarCustomizado(texto, resolve, icone);
+  });
+}
+
+// ===== RETOMAR LOTE: salva progresso para continuar se a página recarregar =====
+function salvarProgressoLote(indiceAtual, total) {
+  localStorage.setItem('lote_em_andamento', JSON.stringify({
+    indice: indiceAtual,
+    total: total,
+    timestamp: Date.now()
+  }));
+}
+
+function limparProgressoLote() {
+  localStorage.removeItem('lote_em_andamento');
+}
+
+function verificarLotePendente() {
+  const pendente = localStorage.getItem('lote_em_andamento');
+  if (!pendente) return null;
+  try {
+    const dados = JSON.parse(pendente);
+    // Só considera válido se foi salvo há menos de 30 minutos (evita lixo antigo)
+    if (Date.now() - dados.timestamp > 30 * 60 * 1000) {
+      limparProgressoLote();
+      return null;
+    }
+    return dados;
+  } catch (e) {
+    limparProgressoLote();
+    return null;
+  }
+}
+
+// ===== LIMITE MENSAL: contador de envios que reseta no dia de assinatura de cada cliente =====
+function obterDiaCiclo() {
+  const dia = parseInt(localStorage.getItem('dia_ciclo') || '1', 10);
+  return (isNaN(dia) || dia < 1 || dia > 31) ? 1 : dia;
+}
+
+// Calcula a data de início do ciclo atual (o "dia de assinatura" mais recente que já passou,
+// incluindo hoje). Isso identifica de forma estável em qual ciclo estamos, sem precisar
+// de um relógio rodando — só compara com a data de hoje a cada verificação.
+function obterIdentificadorCicloAtual() {
+  const diaCiclo = obterDiaCiclo();
+  const hoje = new Date();
+  let anoCiclo = hoje.getFullYear();
+  let mesCiclo = hoje.getMonth(); // 0-indexado
+
+  // Se o dia de hoje ainda não chegou no dia do ciclo deste mês,
+  // o ciclo atual começou no mês anterior
+  if (hoje.getDate() < diaCiclo) {
+    mesCiclo -= 1;
+    if (mesCiclo < 0) { mesCiclo = 11; anoCiclo -= 1; }
+  }
+
+  return `${anoCiclo}-${String(mesCiclo + 1).padStart(2, '0')}`;
+}
+
+// Calcula a próxima data em que o ciclo vai renovar (formato dd/mm/aaaa para exibição)
+function calcularProximaRenovacao(diaCiclo) {
+  const hoje = new Date();
+  let anoProx = hoje.getFullYear();
+  let mesProx = hoje.getMonth();
+
+  // Se o dia do ciclo deste mês já passou (ou é hoje), a próxima renovação é no mês seguinte
+  if (hoje.getDate() >= diaCiclo) {
+    mesProx += 1;
+    if (mesProx > 11) { mesProx = 0; anoProx += 1; }
+  }
+
+  // Ajusta para o último dia do mês caso o dia configurado não exista nele (ex: dia 31 em fevereiro)
+  const ultimoDiaDoMes = new Date(anoProx, mesProx + 1, 0).getDate();
+  const diaFinal = Math.min(diaCiclo, ultimoDiaDoMes);
+
+  const dataRenovacao = new Date(anoProx, mesProx, diaFinal);
+  return dataRenovacao.toLocaleDateString('pt-BR');
+}
+
+function verificarResetMensal() {
+  const cicloSalvo = localStorage.getItem('uso_mensal_mes');
+  const cicloAtual = obterIdentificadorCicloAtual();
+  if (cicloSalvo !== cicloAtual) {
+    localStorage.setItem('uso_mensal_mes', cicloAtual);
+    localStorage.setItem('uso_mensal_contador', '0');
+  }
+}
+
+function obterUsoMensal() {
+  verificarResetMensal();
+  return parseInt(localStorage.getItem('uso_mensal_contador') || '0', 10);
+}
+
+function incrementarUsoMensal(qtd) {
+  verificarResetMensal();
+  const atual = obterUsoMensal();
+  localStorage.setItem('uso_mensal_contador', String(atual + qtd));
+}
+
+// ===== DETECÇÃO DE FOTO DUPLICADA: evita reenviar a mesma etiqueta em lotes diferentes =====
+// Usa um hash do conteúdo do arquivo (não o nome) para identificar com certeza se é a mesma imagem,
+// mesmo que tenha sido renomeada ou vinda de uma seleção diferente.
+async function calcularHashArquivo(file) {
+  // Em contextos sem HTTPS (raro, já que o app roda no GitHub Pages), crypto.subtle
+  // pode não existir — nesse caso, usa um identificador simples (nome+tamanho) como
+  // alternativa, em vez de travar a checagem de duplicidade
+  if (!window.crypto || !window.crypto.subtle) {
+    return `${file.name}_${file.size}_${file.lastModified}`;
+  }
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function obterHashesEnviados() {
+  try {
+    return JSON.parse(localStorage.getItem('hashes_enviados') || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function registrarHashEnviado(hash) {
+  const lista = obterHashesEnviados();
+  lista.push(hash);
+  // Mantém só os últimos 2000 hashes para não inchar o localStorage indefinidamente
+  while (lista.length > 2000) lista.shift();
+  localStorage.setItem('hashes_enviados', JSON.stringify(lista));
+}
+
+function jaFoiEnviadoAntes(hash) {
+  return obterHashesEnviados().includes(hash);
+}
+
+function obterLimiteMensal() {
+  const valor = (localStorage.getItem('limite_mensal') || '').trim().toLowerCase();
+  if (valor === '' || valor === 'ilimitado') return null;
+  const num = parseInt(valor, 10);
+  return isNaN(num) || num <= 0 ? null : num;
+}
+
+function limiteJaFoiDefinido() {
+  // Considera "definido" se existe algo salvo no localStorage (mesmo que seja "ilimitado" explícito).
+  // Só fica destravado se o cliente nunca configurou nada ainda.
+  return localStorage.getItem('limite_mensal') !== null && localStorage.getItem('limite_mensal') !== '';
+}
+
+function salvarLimiteMensal() {
+  const limiteTexto = document.getElementById('limite-mensal').value.trim().toLowerCase();
+  if (limiteTexto === '') {
+    mostrarAvisoCustomizado('Digite um número de limite, ou 0 se não quiser restringir (ilimitado).', '⚠️');
+    return;
+  }
+  const diaTexto = document.getElementById('dia-ciclo').value.trim();
+  const diaNum = parseInt(diaTexto, 10);
+  if (diaTexto === '' || isNaN(diaNum) || diaNum < 1 || diaNum > 31) {
+    mostrarAvisoCustomizado('Digite um dia válido (entre 1 e 31) para o ciclo de cobrança — o dia em que o cliente assinou.', '⚠️');
+    return;
+  }
+  localStorage.setItem('limite_mensal', limiteTexto);
+  localStorage.setItem('dia_ciclo', String(diaNum));
+  // Reavalia o ciclo imediatamente com o novo dia configurado, evitando contagem incorreta
+  verificarResetMensal();
+  atualizarResumoUsoMensal();
+  mostrarAvisoCustomizado('Limite salvo!', '✅');
+}
+
+const SENHA_ADMIN_LIMITE = '6DOfJ9cv6RQJ\\7vP.e{6|RMZX7£1\\o';
+
+// Fallback para navegadores sem suporte a BarcodeDetector (ex: Safari/iOS).
+// Em vez de escanear o QR Code pela câmera, permite digitar a senha de administrador
+// manualmente — mesma proteção, caminho diferente, garantindo que o recurso funcione em todo dispositivo.
+function abrirEntradaSenhaManual(callback) {
+  const overlay = document.createElement('div');
+  overlay.className = 'qr-modal-overlay';
+  overlay.innerHTML = `
+    <div class="qr-modal-box">
+      <p style="font-size:14px; color:var(--text-primary); margin-bottom:12px;">Digite a senha de administrador:</p>
+      <input type="password" id="senha-manual-input" placeholder="Senha" autocomplete="off" data-lpignore="true" data-1p-ignore style="margin-bottom:14px;" />
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-gray" id="senha-manual-cancelar" style="flex:1;">Cancelar</button>
+        <button class="btn btn-green" id="senha-manual-confirmar" style="flex:1;">Confirmar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const inputEl = overlay.querySelector('#senha-manual-input');
+  setTimeout(() => inputEl.focus(), 100);
+
+  function confirmar() {
+    const valor = inputEl.value;
+    overlay.remove();
+    if (valor === SENHA_ADMIN_LIMITE) {
+      callback(true);
+    } else {
+      mostrarAvisoCustomizado('Senha incorreta.', '❌');
+      callback(false);
+    }
+  }
+
+  overlay.querySelector('#senha-manual-confirmar').addEventListener('click', confirmar);
+  overlay.querySelector('#senha-manual-cancelar').addEventListener('click', () => { overlay.remove(); callback(false); });
+  inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') confirmar(); });
+}
+
+// Abre a câmera, lê um QR Code e chama callback(true) se o conteúdo lido
+// for igual à senha de administrador, ou callback(false) se cancelar/falhar.
+function abrirLeitorQrAdmin(callback) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    mostrarAvisoCustomizado('Este dispositivo/navegador não tem suporte à câmera. Não é possível ler o QR Code.', '🚫');
+    callback(false);
+    return;
+  }
+
+  if (!('BarcodeDetector' in window)) {
+    abrirEntradaSenhaManual(callback);
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'qr-modal-overlay';
+  overlay.innerHTML = `
+    <div class="qr-modal-box">
+      <video id="qr-video" playsinline muted></video>
+      <div class="qr-modal-status" id="qr-status"></div>
+      <button class="btn btn-gray" id="qr-cancelar">Cancelar</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const video = overlay.querySelector('#qr-video');
+  const statusEl = overlay.querySelector('#qr-status');
+  let stream = null;
+  let pararLeitura = false;
+
+  function encerrar(resultado) {
+    pararLeitura = true;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    overlay.remove();
+    callback(resultado);
+  }
+
+  overlay.querySelector('#qr-cancelar').addEventListener('click', () => encerrar(false));
+
+  const detector = new BarcodeDetector({ formats: ['qr_code'] });
+
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then((mediaStream) => {
+      stream = mediaStream;
+      video.srcObject = stream;
+      video.play();
+
+      async function tick() {
+        if (pararLeitura) return;
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          try {
+            const codigos = await detector.detect(video);
+            if (codigos && codigos.length > 0) {
+              const valorLido = codigos[0].rawValue;
+              if (valorLido === SENHA_ADMIN_LIMITE) {
+                statusEl.textContent = '✅ QR Code válido!';
+                setTimeout(() => encerrar(true), 400);
+                return;
+              } else {
+                statusEl.textContent = '❌ QR Code lido, mas não é o correto. Tente novamente.';
+              }
+            }
+          } catch (e) {
+            // Falha pontual na detecção de um frame não é erro fatal — tenta o próximo frame
+          }
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    })
+    .catch((err) => {
+      statusEl.textContent = '❌ Não foi possível acessar a câmera: ' + err.message;
+      setTimeout(() => encerrar(false), 2000);
+    });
+}
+
+function destrancarLimite() {
+  abrirLeitorQrAdmin((autorizado) => {
+    if (!autorizado) return;
+    document.getElementById('limite-travado-view').style.display = 'none';
+    document.getElementById('limite-edicao-view').style.display = 'block';
+    const valorSalvo = localStorage.getItem('limite_mensal') || '';
+    document.getElementById('limite-mensal').value = (valorSalvo === 'ilimitado') ? '0' : valorSalvo;
+    document.getElementById('dia-ciclo').value = localStorage.getItem('dia_ciclo') || '';
+  });
+}
+
+function resetarContadorMensal() {
+  abrirLeitorQrAdmin((autorizado) => {
+    if (!autorizado) return;
+    confirmarCustomizado('Resetar o contador de uso deste mês para 0?', (confirmou) => {
+      if (confirmou) {
+        localStorage.setItem('uso_mensal_mes', obterIdentificadorCicloAtual());
+        localStorage.setItem('uso_mensal_contador', '0');
+        atualizarResumoUsoMensal();
+        mostrarAvisoCustomizado('Contador resetado!', '✅');
+      }
+    }, '🔄');
+  });
+}
+
+function atualizarResumoUsoMensal() {
+  const usoEl = document.getElementById('uso-mensal-numero');
+  const labelEl = document.getElementById('uso-mensal-label');
+  const barraEl = document.getElementById('uso-mensal-barra');
+  if (!usoEl) return;
+
+  const uso = obterUsoMensal();
+  const limite = obterLimiteMensal();
+
+  usoEl.textContent = uso;
+  if (limite) {
+    labelEl.textContent = `de ${limite} comprovantes neste mês`;
+    const pct = Math.min(100, Math.round((uso / limite) * 100));
+    barraEl.style.width = pct + '%';
+    barraEl.style.background = pct >= 100 ? '#dc3545' : (pct >= 80 ? '#e6a700' : 'var(--cor-loja,#3a3f44)');
+  } else {
+    labelEl.textContent = 'comprovantes enviados (sem limite definido)';
+    barraEl.style.width = '0%';
+  }
+
+  // Decide qual view mostrar: travada (já tem limite configurado) ou edição (primeira vez)
+  const travadaView = document.getElementById('limite-travado-view');
+  const edicaoView = document.getElementById('limite-edicao-view');
+  const btnLapis = document.getElementById('btn-lapis-limite');
+  const cicloInfoEl = document.getElementById('ciclo-travado-info');
+  if (travadaView && edicaoView) {
+    if (limiteJaFoiDefinido()) {
+      document.getElementById('limite-travado-valor').textContent = limite ? limite : 'Ilimitado';
+      travadaView.style.display = 'block';
+      edicaoView.style.display = 'none';
+      if (btnLapis) btnLapis.style.display = 'block';
+      if (cicloInfoEl) {
+        const diaCiclo = obterDiaCiclo();
+        const proximaRenovacao = calcularProximaRenovacao(diaCiclo);
+        cicloInfoEl.textContent = `🔄 Ciclo renova todo dia ${diaCiclo} · próxima: ${proximaRenovacao}`;
+      }
+    } else {
+      travadaView.style.display = 'none';
+      edicaoView.style.display = 'block';
+      if (btnLapis) btnLapis.style.display = 'none';
+    }
+  }
+}
+
+async function startProcessing() {
+  const anthropicKey = localStorage.getItem('anthropic_key');
+  const evoServer     = localStorage.getItem('evo_server');
+  const evoInstance   = localStorage.getItem('evo_instance');
+  const evoApiKey     = localStorage.getItem('evo_apikey');
+
+  if (!anthropicKey || !evoServer || !evoInstance || !evoApiKey) {
+    mostrarAvisoCustomizado('Configure todas as chaves no Painel antes de enviar.', '⚠️');
+    return;
+  }
+
+  // Exige que um plano (limite mensal, mesmo que "ilimitado") tenha sido definido
+  // explicitamente antes de liberar qualquer envio — evita uso sem plano configurado.
+  if (!limiteJaFoiDefinido()) {
+    mostrarAvisoCustomizado('Nenhum plano foi configurado ainda para esta loja.', '📦');
+    setSection('sec-painel');
+    const btnPlano = document.querySelector('.nav-tab[onclick*="tab-plano"]');
+    if (btnPlano) showTab('tab-plano', btnPlano);
+    return;
+  }
+
+  // Verifica se o lote ultrapassaria o limite mensal configurado
+  const limiteMensal = obterLimiteMensal();
+  if (limiteMensal) {
+    const usoAtual = obterUsoMensal();
+    const restante = limiteMensal - usoAtual;
+    if (restante <= 0) {
+      mostrarAvisoCustomizado('Limite mensal de comprovantes já foi atingido!', '🚫');
+      return;
+    }
+    if (selectedFiles.length > restante) {
+      const continuar = await confirmarCustomizadoAsync(`Esse lote tem ${selectedFiles.length} fotos, mas restam apenas ${restante} envios disponíveis neste mês (limite de ${limiteMensal}).<br><br>Deseja continuar mesmo assim? O envio vai parar automaticamente ao atingir o limite.`, '⚠️');
+      if (!continuar) return;
+    }
+  }
+
+  dadosLidos = [];
+  const items = selectedFiles.map(f => ({ file:f, previewUrl: URL.createObjectURL(f) }));
+  setSection('sec-processing');
+  renderItems(items);
+
+  loteEmAndamento = true;
+  await pedirWakeLock();
+
+  let ok = 0, err = 0;
+  const inicioLote = Date.now();
+
+  // Usa o valor manual do Painel só se o usuário mudou de "auto"; senão calcula pelo volume
+  const intervaloManual = localStorage.getItem('intervalo_envio');
+  const segundosIntervalo = (intervaloManual && intervaloManual !== 'auto')
+    ? parseInt(intervaloManual, 10)
+    : calcularIntervaloRecomendado(selectedFiles.length);
+  const intervaloEnvios = segundosIntervalo * 1000;
+
+  for (let i = 0; i < selectedFiles.length; i++) {
+    // Para automaticamente se o limite mensal foi atingido no meio do lote
+    if (limiteMensal && obterUsoMensal() >= limiteMensal) {
+      updateItem(i, selectedFiles[i].name, 'Limite de envios do mês atingido.', 'Erro', 'badge-err');
+      dadosLidos.push({
+        nome: selectedFiles[i].name,
+        file: selectedFiles[i],
+        sucesso: false,
+        previewUrl: items[i].previewUrl,
+        erro: 'Limite de envios do mês atingido.'
+      });
+      err++;
+      continue;
+    }
+
+    salvarProgressoLote(i, selectedFiles.length);
+    updateProgress(i, selectedFiles.length);
+
+    // Verifica se esta exata foto já foi enviada antes (em outro lote, mesmo dia ou anterior)
+    const hashArquivo = await calcularHashArquivo(selectedFiles[i]);
+    if (jaFoiEnviadoAntes(hashArquivo)) {
+      updateItem(i, selectedFiles[i].name, 'Esta foto já foi enviada anteriormente.', 'Duplicada', 'badge-err');
+      dadosLidos.push({
+        nome: selectedFiles[i].name,
+        file: selectedFiles[i],
+        sucesso: false,
+        duplicado: true,
+        previewUrl: items[i].previewUrl,
+        erro: 'Esta foto já foi enviada anteriormente.'
+      });
+      err++;
+      updateProgress(i+1, selectedFiles.length);
+      continue;
+    }
+
+    updateItem(i, selectedFiles[i].name, 'Lendo a imagem...', 'Lendo', 'badge-proc');
+    let dadosParciais = null;
+    try {
+      const dados = await lerEtiqueta(selectedFiles[i], anthropicKey);
+
+      // Se "cobrar taxa de todos" estiver ativo, força a taxa em todo o lote,
+      // ignorando o $ / $$ lido da etiqueta
+      if (localStorage.getItem('taxa_todos_ativa') === '1') {
+        const valorForcado = localStorage.getItem('taxa_todos_valor');
+        if (valorForcado) dados.taxa = valorForcado;
+      }
+
+      dadosParciais = dados;
+      if (!dados || !dados.telefone) throw new Error('Número de telefone não encontrado na etiqueta.');
+      updateItem(i, dados.nome || selectedFiles[i].name, `${dados.telefone} · Enviando...`, 'Enviando', 'badge-proc');
+      await enviarFoto(selectedFiles[i], dados, evoServer, evoInstance, evoApiKey);
+      updateItem(i, dados.nome, `${dados.telefone} · ✓ Enviado`, 'Enviado', 'badge-ok');
+      dadosLidos.push({ ...dados, file: selectedFiles[i], previewUrl: items[i].previewUrl, sucesso: true });
+      incrementarUsoMensal(1);
+      registrarHashEnviado(hashArquivo);
+      limparErroDeApi();
+      ok++;
+    } catch(e) {
+      updateItem(i, (dadosParciais && dadosParciais.nome) || selectedFiles[i].name, e.message, 'Erro', 'badge-err');
+      dadosLidos.push({
+        ...(dadosParciais || {}),
+        nome: (dadosParciais && dadosParciais.nome) || selectedFiles[i].name,
+        file: selectedFiles[i],
+        sucesso: false,
+        previewUrl: items[i].previewUrl,
+        erro: e.message
+      });
+      // ERR-03 e ERR-04 indicam problemas de autenticação/configuração da API de envio
+      // ERR-01 e ERR-02 são erros de leitura da etiqueta, não de configuração
+      const msgErro = (e.message || '').toLowerCase();
+      const pareceErroDeChave = msgErro.includes('falha ao enviar') || msgErro.includes('err-05');
+      if (pareceErroDeChave) marcarErroDeApi();
+      err++;
+    }
+    updateProgress(i+1, selectedFiles.length);
+
+    // Intervalo entre envios (proteção contra bloqueio do WhatsApp por volume),
+    // só aplica se ainda houver próximo item na fila
+    if (i < selectedFiles.length - 1 && intervaloEnvios > 0) {
+      await contagemRegressiva(intervaloEnvios);
+    }
+  }
+
+  loteEmAndamento = false;
+  liberarWakeLock();
+  limparProgressoLote();
+
+  await sleep(400);
+  salvarHistorico(inicioLote, ok, err);
+  showDone(ok, err);
+}
+
+function contagemRegressiva(ms) {
+  return new Promise((resolve) => {
+    const segundosTotais = Math.ceil(ms / 1000);
+    let restante = segundosTotais;
+    const textoEl = document.getElementById('prog-text');
+    const tick = () => {
+      if (textoEl) textoEl.textContent = `Aguardando ${restante}s antes do próximo envio...`;
+      if (restante <= 0) { resolve(); return; }
+      restante--;
+      setTimeout(tick, 1000);
+    };
+    tick();
+  });
+}
+
+async function lerEtiqueta(file, apiKey) {
+  const b64 = await toBase64(file);
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      messages: [{ role:'user', content:[
+        { type:'image', source:{ type:'base64', media_type: file.type||'image/jpeg', data: b64 }},
+        { type:'text', text:`Leia esta etiqueta de pedido. Pode ser uma etiqueta de loja normal ou uma etiqueta de excursao. Responda APENAS com JSON puro sem markdown:
+{"nome":"nome completo do cliente","telefone":"apenas digitos com DDD sem espacos ex 81998765432","box":"numero do box se houver, senao vaga ou numero do assento","setor":"setor e rua se houver, senao setor da excursao","excursao":"nome da excursao se houver, senao vazio","cidade":"cidade do cliente se houver, senao vazio","status":"PAGO ou outro status","taxa":"REGRA ESTRITA: olhe APENAS o campo Excursao da etiqueta. Se o texto do campo Excursao terminar EXATAMENTE com ' - $' (um cifrao isolado, com espaco e hifen antes) retorne 5.00. Se terminar EXATAMENTE com ' - $$' (dois cifroes juntos) retorne 10.00. Em QUALQUER outro caso -- incluindo quando nao ha cifrao, quando o cifrao aparece em outro lugar da imagem (como em valores de carne, comprovantes de pagamento, logos, ou qualquer outro texto que nao seja o campo Excursao), ou quando ha qualquer ambiguidade -- retorne sem taxa. NUNCA infira taxa a partir de números, valores monetários de boletos/comprovantes, ou qualquer simbolo fora do campo Excursao da etiqueta de loja/excursao."}` }
+      ]}]
+    })
+  });
+  if (!resp.ok) throw new Error('Não foi possível ler esta etiqueta. Use uma foto mais nítida e tente novamente.');
+  const data = await resp.json();
+  const text = data.content.map(c => c.text||'').join('').replace(/```json|```/g,'').trim();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error('Não foi possível ler esta etiqueta. Use uma foto mais nítida e tente novamente.');
+  }
+}
+
+async function enviarFoto(file, dados, serverUrl, instanceName, apiKey) {
+  const b64 = await toBase64(file);
+  const telefone = dados.telefone.replace(/\D/g,'');
+  const caption = montarMensagem(dados);
+  const url = `https://${serverUrl}/message/sendMedia/${instanceName}`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+    body: JSON.stringify({
+      number: `55${telefone}`,
+      mediatype: 'image',
+      mimetype: file.type || 'image/jpeg',
+      media: b64,
+      fileName: file.name || 'comprovante.jpg',
+      caption: caption
+    })
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error('Falha ao enviar a foto. Verifique sua conexão e tente novamente.');
+  }
+}
+
+async function enviarMensagem(dados, serverUrl, instanceName, apiKey) {
+  const telefone = dados.telefone.replace(/\D/g,'');
+  const mensagem = montarMensagem(dados);
+  const url = `https://${serverUrl}/message/sendText/${instanceName}`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+    body: JSON.stringify({ number: `55${telefone}`, text: mensagem })
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error('Falha ao enviar a mensagem. Verifique sua conexão e tente novamente.');
+  }
+}
+
+function montarMensagem(dados) {
+  const temTaxa = dados.taxa && dados.taxa !== 'sem taxa' && dados.taxa !== '' && dados.taxa !== '0';
+  const tpl = temTaxa ? MSG_TAXA : (localStorage.getItem('msg_template') || MSG_PADRAO);
+  const pixChave = localStorage.getItem('pix_chave') || '(configure no Painel)';
+  const pixNome  = localStorage.getItem('pix_nome') || '(configure no Painel)';
+  const pixBanco = localStorage.getItem('pix_banco') || '(configure no Painel)';
+  // Garante 2 casas decimais sempre (evita "R$ 5" em vez de "R$ 5,00" quando o valor
+  // vem do campo manual de "cobrar taxa de todos", digitado sem decimais)
+  let taxaFormatada = dados.taxa || '?';
+  const taxaNum = parseFloat(String(dados.taxa).replace(',', '.'));
+  if (!isNaN(taxaNum)) taxaFormatada = taxaNum.toFixed(2);
+  return tpl
+    .replace(/{nome}/g, dados.nome || '?')
+    .replace(/{box}/g, dados.box || '?')
+    .replace(/{setor}/g, dados.setor || '?')
+    .replace(/{status}/g, dados.status || 'PAGO')
+    .replace(/{taxa}/g, taxaFormatada)
+    .replace(/{pix_chave}/g, pixChave)
+    .replace(/{pix_nome}/g, pixNome)
+    .replace(/{pix_banco}/g, pixBanco);
+}
+
+function showDone(ok, err) {
+  document.getElementById('s-total').textContent = dadosLidos.length;
+  document.getElementById('s-ok').textContent = ok;
+  document.getElementById('s-err').textContent = err;
+  document.getElementById('done-list').innerHTML = dadosLidos.map((r, i) => `
+    <div class="item-row">
+      <img class="item-thumb" src="${r.previewUrl}" />
+      <div class="item-info">
+        <div class="name">${r.nome||'?'}</div>
+        <div class="detail">${r.telefone||r.erro||''}</div>
+      </div>
+      ${r.sucesso
+        ? `<span class="badge badge-ok">Enviado</span>`
+        : (r.duplicado
+          ? `<span class="badge badge-wait">Já enviada</span>`
+          : `<button class="btn-share" onclick="compartilharFoto(${i})">📤 Enviar Manualmente</button>`)
+      }
+    </div>`).join('');
+  setSection('sec-done');
+}
+
+async function compartilharFoto(i) {
+  const item = dadosLidos[i];
+  if (!item || !item.file) {
+    mostrarAvisoCustomizado('Foto não disponível para compartilhar.', '⚠️');
+    return;
+  }
+
+  // Só monta a legenda do comprovante se o sistema conseguiu ler o telefone
+  const legenda = item.telefone ? montarMensagem(item) : '';
+
+  // Web Share API com arquivo: abre o menu nativo do celular (WhatsApp, etc)
+  if (navigator.canShare && navigator.canShare({ files: [item.file] })) {
+    try {
+      await navigator.share({
+        files: [item.file],
+        text: legenda
+      });
+      return;
+    } catch (e) {
+      // Usuário cancelou o compartilhamento ou navegador bloqueou — tenta fallback
+      if (e.name === 'AbortError') return;
+    }
+  }
+
+  // Fallback: navegador não suporta compartilhar arquivo (ex: PC) — baixa a foto
+  const link = document.createElement('a');
+  link.href = item.previewUrl;
+  link.download = item.file.name || 'comprovante.jpg';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  mostrarAvisoCustomizado('Seu navegador não permite compartilhar direto. A foto foi baixada — envie manualmente pelo WhatsApp.', '⚠️');
+}
+
+function salvarHistorico(inicioLote, ok, err) {
+  const historico = JSON.parse(localStorage.getItem('historico_lotes') || '[]');
+
+  const itens = dadosLidos.map(r => ({
+    nome: r.nome || '?',
+    telefone: r.telefone || '',
+    box: r.box || '',
+    setor: r.setor || '',
+    excursao: r.excursao || '',
+    taxa: r.taxa && r.taxa !== 'sem taxa' ? r.taxa : '',
+    sucesso: !!r.sucesso,
+    erro: r.erro || ''
+  }));
+
+  historico.unshift({
+    data: new Date(inicioLote).toISOString(),
+    total: dadosLidos.length,
+    enviados: ok,
+    erros: err,
+    itens: itens
+  });
+
+  // Mantém só os últimos 30 lotes para não inchar o localStorage
+  while (historico.length > 30) historico.pop();
+
+  localStorage.setItem('historico_lotes', JSON.stringify(historico));
+}
+
+function formatarDataHistorico(isoStr) {
+  const d = new Date(isoStr);
+  const dataStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const horaStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `${dataStr} às ${horaStr}`;
+}
+
+function abrirHistorico() {
+  const historico = JSON.parse(localStorage.getItem('historico_lotes') || '[]');
+  const container = document.getElementById('historico-lista');
+
+  if (historico.length === 0) {
+    container.innerHTML = `<div class="alert alert-info">Nenhum lote enviado ainda.</div>`;
+  } else {
+    container.innerHTML = historico.map((lote, idx) => {
+      const valorTaxas = lote.itens
+        .filter(it => it.taxa)
+        .reduce((soma, it) => soma + (parseFloat(it.taxa) || 0), 0);
+
+      return `
+      <div class="card" style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleLoteHistorico(${idx})">
+          <div>
+            <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${formatarDataHistorico(lote.data)}</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">
+              ${lote.total} etiquetas · ${lote.enviados} enviadas${lote.erros > 0 ? ` · ${lote.erros} erro(s)` : ''}${valorTaxas > 0 ? ` · R$ ${valorTaxas.toFixed(2)} em taxas` : ''}
+            </div>
+          </div>
+          <span style="font-size:18px; color:var(--text-secondary);" id="lote-arrow-${idx}">▾</span>
+        </div>
+        <div id="lote-detalhe-${idx}" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--row-border);">
+          ${lote.itens.map(it => `
+            <div class="item-row" style="padding:6px 0;">
+              <div class="item-info">
+                <div class="name" style="font-size:12px;">${it.nome}</div>
+                <div class="detail">${it.telefone || ''}${it.taxa ? ` · R$ ${parseFloat(it.taxa).toFixed(2)}` : ''}</div>
+              </div>
+              <span class="badge ${it.sucesso ? 'badge-ok' : 'badge-err'}" style="font-size:10px;">${it.sucesso ? 'Enviado' : 'Erro'}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  setSection('sec-historico');
+}
+
+function toggleLoteHistorico(idx) {
+  const det = document.getElementById('lote-detalhe-' + idx);
+  const arrow = document.getElementById('lote-arrow-' + idx);
+  const aberto = det.style.display !== 'none';
+  det.style.display = aberto ? 'none' : 'block';
+  arrow.textContent = aberto ? '▾' : '▴';
+}
+
+function limparHistorico() {
+  const historico = JSON.parse(localStorage.getItem('historico_lotes') || '[]');
+  if (historico.length === 0) {
+    mostrarAvisoCustomizado('Sem histórico para limpar.', '📋');
+    return;
+  }
+  confirmarCustomizado('Apagar todo o histórico de lotes? Essa ação não pode ser desfeita.', (confirmou) => {
+    if (confirmou) {
+      localStorage.removeItem('historico_lotes');
+      abrirHistorico();
+    }
+  }, '🗑️');
+}
+
+function resetApp() {
+  selectedFiles=[]; dadosLidos=[];
+  document.getElementById('thumb-grid').innerHTML='';
+  document.getElementById('file-input').value='';
+  document.getElementById('btn-send').disabled=true;
+  setSection('sec-upload');
+}
+
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      rej(new Error('Arquivo não é uma imagem válida'));
+      return;
+    }
+
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    const limpar = () => URL.revokeObjectURL(url);
+
+    img.onload = () => {
+      try {
+        if (!img.width || !img.height) {
+          limpar();
+          rej(new Error('Imagem com dimensões inválidas'));
+          return;
+        }
+
+        // Limita o lado maior a 1600px para evitar travar em fotos muito grandes (12MP+)
+        const MAX_LADO = 1600;
+        let w = img.width;
+        let h = img.height;
+        const maiorLado = Math.max(w, h);
+        if (maiorLado > MAX_LADO) {
+          const escala = MAX_LADO / maiorLado;
+          w = Math.round(w * escala);
+          h = Math.round(h * escala);
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          limpar();
+          rej(new Error('Não foi possível processar a imagem neste dispositivo'));
+          return;
+        }
+
+        const isLandscape = w > h;
+        if (isLandscape) {
+          // Rotaciona 90 graus para deixar vertical
+          canvas.width = h;
+          canvas.height = w;
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate(90 * Math.PI / 180);
+          ctx.drawImage(img, -w / 2, -h / 2, w, h);
+        } else {
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(img, 0, 0, w, h);
+        }
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        if (!dataUrl || dataUrl === 'data:,') {
+          limpar();
+          rej(new Error('Falha ao converter imagem (canvas vazio)'));
+          return;
+        }
+
+        res(dataUrl.split(',')[1]);
+        limpar();
+      } catch (e) {
+        limpar();
+        rej(new Error('Erro ao processar imagem: ' + e.message));
+      }
+    };
+
+    img.onerror = () => {
+      limpar();
+      rej(new Error('Não foi possível abrir esta imagem (arquivo corrompido ou formato não suportado)'));
+    };
+
+    img.src = url;
+  });
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function aplicarTema() {
+  const tema = localStorage.getItem('tema') || 'light';
+  if (tema === 'dark') {
+    document.body.setAttribute('data-theme', 'dark');
+    document.getElementById('theme-toggle-btn').textContent = '☀️';
+  } else {
+    document.body.removeAttribute('data-theme');
+    document.getElementById('theme-toggle-btn').textContent = '🌙';
+  }
+}
+
+function toggleTheme() {
+  const atual = localStorage.getItem('tema') || 'light';
+  const novo = atual === 'light' ? 'dark' : 'light';
+  localStorage.setItem('tema', novo);
+  aplicarTema();
+}
+
+aplicarTema();
+loadConfig();
+atualizarAvisoTaxaTodos();
+verificarFotosCompartilhadas();
+
+// Tela inicial inteligente: se a loja ainda não foi ativada (sem código salvo),
+// abre direto no Painel na aba de ativação. Se já ativou, segue normal (Enviar).
+if (!localStorage.getItem('codigo_acesso')) {
+  setSection('sec-painel');
+  const btnApis = document.getElementById('btn-tab-apis');
+  if (btnApis) showTab('tab-apis', btnApis);
+}
+
+// Se o app foi recarregado (fechado e reaberto) no meio de um lote, os arquivos
+// de imagem se perdem da memória — avisa o usuário em vez de deixar confuso
+const lotePendente = verificarLotePendente();
+if (lotePendente) {
+  limparProgressoLote();
+  setTimeout(() => {
+    mostrarAvisoCustomizado(`O envio anterior foi interrompido no item ${lotePendente.indice + 1} de ${lotePendente.total} (o app foi fechado ou recarregado). Selecione as fotos que ainda faltam enviar.`, '⚠️');
+  }, 300);
+}
+
+// ===== PWA: registro do service worker e aviso de atualização =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' }).then((reg) => {
+
+      // Verifica se já tem uma versão nova esperando
+      if (reg.waiting) {
+        mostrarAvisoAtualizacao(reg);
+      }
+
+      // Detecta quando uma nova versão termina de instalar
+      reg.addEventListener('updatefound', () => {
+        const novoWorker = reg.installing;
+        novoWorker.addEventListener('statechange', () => {
+          if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            mostrarAvisoAtualizacao(reg);
+          }
+        });
+      });
+
+      // Verifica por atualizações a cada 15 segundos enquanto o app está aberto
+      setInterval(() => reg.update(), 15000);
+    }).catch((err) => console.log('Erro ao registrar service worker:', err));
+
+    // Quando o novo service worker assume o controle, recarrega a página
+    let jaRecarregou = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (jaRecarregou) return;
+      jaRecarregou = true;
+      window.location.reload();
+    });
+  });
+}
+
+function mostrarAvisoAtualizacao(reg) {
+  if (document.getElementById('update-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.className = 'update-banner';
+  banner.innerHTML = `
+    <span>🆕 Nova versão do app disponível!</span>
+    <button class="update-btn" id="update-btn">Atualizar agora</button>
+  `;
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => banner.classList.add('show'));
+
+  document.getElementById('update-btn').addEventListener('click', () => {
+    const worker = reg.waiting || reg.installing;
+    if (worker) worker.postMessage('SKIP_WAITING');
+    banner.querySelector('span').textContent = '🔄 Atualizando...';
+    document.getElementById('update-btn').style.display = 'none';
+  });
+}
+</script>
+</body>
+</html>
