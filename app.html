@@ -503,6 +503,12 @@ Nome: {pix_nome}
 {pix_banco}`;
 
 let selectedFiles = [];
+
+// Escapa texto pra evitar XSS quando dados da etiqueta (lidos pela IA) entram no HTML.
+// A IA lê texto livre da foto; sem isso, uma etiqueta maliciosa poderia injetar codigo.
+function escHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 let dadosLidos = [];
 
 // ===== CONFIG =====
@@ -1069,7 +1075,7 @@ function abrirFotoEmTelaCheia(index) {
   overlay.className = 'foto-fullscreen-overlay';
   overlay.innerHTML = `
     <button class="foto-fullscreen-fechar" id="foto-fechar">✕</button>
-    <div class="foto-fullscreen-nome">${index + 1} de ${selectedFiles.length} · ${file.name}</div>
+    <div class="foto-fullscreen-nome">${index + 1} de ${selectedFiles.length} · ${escHtml(file.name)}</div>
     <img src="${url}" class="foto-fullscreen-img" />
   `;
   document.body.appendChild(overlay);
@@ -1148,7 +1154,7 @@ function renderItems(items) {
     <div class="item-row">
       <img class="item-thumb" src="${it.previewUrl}" />
       <div class="item-info">
-        <div class="name" id="iname-${i}">${it.file.name}</div>
+        <div class="name" id="iname-${i}">${escHtml(it.file.name)}</div>
         <div class="detail" id="idetail-${i}">Aguardando...</div>
       </div>
       <span class="badge badge-wait" id="ibadge-${i}">Fila</span>
@@ -1862,8 +1868,8 @@ function showDone(ok, err) {
     <div class="item-row">
       <img class="item-thumb" src="${r.previewUrl}" />
       <div class="item-info">
-        <div class="name">${r.nome||'?'}</div>
-        <div class="detail">${r.telefone||r.erro||''}</div>
+        <div class="name">${escHtml(r.nome||'?')}</div>
+        <div class="detail">${escHtml(r.telefone||r.erro||'')}</div>
       </div>
       ${r.sucesso
         ? `<span class="badge badge-ok">Enviado</span>`
@@ -1971,8 +1977,8 @@ function abrirHistorico() {
           ${lote.itens.map(it => `
             <div class="item-row" style="padding:6px 0;">
               <div class="item-info">
-                <div class="name" style="font-size:12px;">${it.nome}</div>
-                <div class="detail">${it.telefone || ''}${it.taxa ? ` · R$ ${parseFloat(it.taxa).toFixed(2)}` : ''}</div>
+                <div class="name" style="font-size:12px;">${escHtml(it.nome)}</div>
+                <div class="detail">${escHtml(it.telefone || '')}${it.taxa ? ` · R$ ${parseFloat(it.taxa).toFixed(2)}` : ''}</div>
               </div>
               <span class="badge ${it.sucesso ? 'badge-ok' : 'badge-err'}" style="font-size:10px;">${it.sucesso ? 'Enviado' : 'Erro'}</span>
             </div>
