@@ -1150,25 +1150,35 @@ function abrirFotoResultado(i) {
     return;
   }
 
-  // Monta a legenda informativa (nome / telefone lidos, ou o erro)
-  let info = '';
-  if (item.nome) info += escHtml(item.nome);
-  if (item.telefone) info += (info ? ' · ' : '') + '📱 ' + escHtml(item.telefone);
-  if (!item.telefone && item.erro) info += (info ? ' · ' : '') + '⚠️ ' + escHtml(item.erro);
-  if (!info) info = 'Não foi possível ler os dados desta etiqueta';
+  // Mostra o botão "Enviar Manualmente" dentro da tela cheia, mas só pros itens
+  // que falharam (nao faz sentido em itens ja enviados ou duplicados).
+  const mostrarBotao = !item.sucesso && !item.duplicado;
+  const botaoHtml = mostrarBotao
+    ? `<button class="btn-share" id="foto-res-enviar" style="margin-top:18px; padding:12px 24px; font-size:15px;">📤 Enviar Manualmente</button>`
+    : '';
 
   const overlay = document.createElement('div');
   overlay.className = 'foto-fullscreen-overlay';
   overlay.innerHTML = `
     <button class="foto-fullscreen-fechar" id="foto-res-fechar">✕</button>
-    <div class="foto-fullscreen-nome">${info}</div>
     <img src="${item.previewUrl}" class="foto-fullscreen-img" />
+    ${botaoHtml}
   `;
   document.body.appendChild(overlay);
 
   function fechar() { overlay.remove(); }
   overlay.querySelector('#foto-res-fechar').addEventListener('click', fechar);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) fechar(); });
+
+  // Botao de enviar: fecha a tela cheia e dispara o compartilhamento da foto
+  const btnEnviar = overlay.querySelector('#foto-res-enviar');
+  if (btnEnviar) {
+    btnEnviar.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fechar();
+      compartilharFoto(i);
+    });
+  }
 }
 
 function gerarMiniatura(file, index) {
