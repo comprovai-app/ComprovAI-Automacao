@@ -389,8 +389,6 @@
       <button class="btn btn-green" onclick="saveConfig()">💾 Salvar PIX</button>
     </div>
 
-    <!-- ABA APARÊNCIA -->
-    <!-- ABA PLANO -->
     <div id="tab-plano" style="display:none">
       <div class="card">
         <div class="card-title" style="margin-bottom:0;">📦 Seu plano</div>
@@ -413,6 +411,7 @@
         </div>
       </div>
     </div>
+
   </div>
 
   <!-- ========== UPLOAD ========== -->
@@ -1194,7 +1193,7 @@ function updateProgress(done, total) {
 function renderItems(items) {
   document.getElementById('items-list').innerHTML = items.map((it, i) => `
     <div class="item-row">
-      <img class="item-thumb" src="${it.previewUrl}" />
+      <img class="item-thumb" src="${it.previewUrl}" loading="lazy" />
       <div class="item-info">
         <div class="name" id="iname-${i}">${escHtml(it.file.name)}</div>
         <div class="detail" id="idetail-${i}">Aguardando...</div>
@@ -1679,6 +1678,10 @@ async function startProcessing() {
   await pedirWakeLock();
 
   let ok = 0, err = 0;
+  // Conta falhas de CONEXAO/API seguidas (nao erros de leitura de etiqueta individual).
+  // Se a instancia caiu ou o token expirou, evita insistir em TODO o lote inutilmente.
+  let errosConsecutivosDeApi = 0;
+  const LIMITE_ERROS_CONSECUTIVOS = 3;
   const inicioLote = Date.now();
 
   // Usa o valor manual do Painel só se o usuário mudou de "auto"; senão calcula pelo volume
@@ -1745,6 +1748,7 @@ async function startProcessing() {
       registrarHashEnviado(hashArquivo);
       limparErroDeApi();
       ok++;
+      errosConsecutivosDeApi = 0;
     } catch(e) {
       updateItem(i, (dadosParciais && dadosParciais.nome) || selectedFiles[i].name, e.message, 'Erro', 'badge-err');
       dadosLidos.push({
@@ -1759,10 +1763,36 @@ async function startProcessing() {
       // ERR-01 e ERR-02 são erros de leitura da etiqueta, não de configuração
       const msgErro = (e.message || '').toLowerCase();
       const pareceErroDeChave = msgErro.includes('falha ao enviar') || msgErro.includes('err-05');
-      if (pareceErroDeChave) marcarErroDeApi();
+      if (pareceErroDeChave) {
+        marcarErroDeApi();
+        errosConsecutivosDeApi++;
+      } else {
+        errosConsecutivosDeApi = 0;
+      }
       err++;
+
+      // Se varias falhas de conexao/API seguidas, para o lote em vez de insistir
+      // em todas as fotos restantes (evita perder minutos com tudo fadado a falhar).
+      if (errosConsecutivosDeApi >= LIMITE_ERROS_CONSECUTIVOS) {
+        const restantes = selectedFiles.length - (i + 1);
+        for (let j = i + 1; j < selectedFiles.length; j++) {
+          updateItem(j, selectedFiles[j].name, 'Envio interrompido (falha de conexão).', 'Erro', 'badge-err');
+          dadosLidos.push({
+            nome: selectedFiles[j].name,
+            file: selectedFiles[j],
+            sucesso: false,
+            previewUrl: items[j].previewUrl,
+            erro: 'Envio interrompido (falha de conexão).'
+          });
+          err++;
+        }
+        updateProgress(selectedFiles.length, selectedFiles.length);
+        mostrarAvisoCustomizado(`Envio interrompido após ${LIMITE_ERROS_CONSECUTIVOS} falhas seguidas. Verifique sua conexão e se a instância está conectada no Painel. ${restantes} foto(s) não foram tentadas.`, '🚫');
+        break;
+      }
     }
     updateProgress(i+1, selectedFiles.length);
+
 
     // Intervalo entre envios (proteção contra bloqueio do WhatsApp por volume),
     // só aplica se ainda houver próximo item na fila
@@ -1795,9 +1825,27 @@ function contagemRegressiva(ms) {
   });
 }
 
+// Fetch com tempo limite: numa conexão ruim (comum em feira/mercado), uma requisição
+// travada poderia ficar pendurada por minutos sem nenhum aviso. Isso garante que,
+// depois do tempo limite, o app desiste e mostra um erro claro em vez de travar.
+async function fetchComTimeout(url, options, timeoutMs, mensagemTimeout) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      throw new Error(mensagemTimeout || 'Tempo de espera esgotado. Verifique sua conexão e tente novamente.');
+    }
+    throw new Error('Falha de conexão. Verifique sua internet e tente novamente.');
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function lerEtiqueta(file, apiKey) {
   const b64 = await toBase64(file);
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+  const resp = await fetchComTimeout('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1814,7 +1862,7 @@ async function lerEtiqueta(file, apiKey) {
 {"nome":"nome completo do cliente","telefone":"apenas digitos com DDD sem espacos ex 81998765432","box":"numero do box se houver, senao vaga ou numero do assento","setor":"setor e rua se houver, senao setor da excursao","excursao":"nome da excursao se houver, senao vazio","cidade":"cidade do cliente se houver, senao vazio","status":"PAGO ou outro status","taxa":"REGRA ESTRITA: olhe APENAS o campo Excursao da etiqueta. Se o texto do campo Excursao terminar EXATAMENTE com ' - $' (um cifrao isolado, com espaco e hifen antes) retorne 5.00. Se terminar EXATAMENTE com ' - $$' (dois cifroes juntos) retorne 10.00. Em QUALQUER outro caso -- incluindo quando nao ha cifrao, quando o cifrao aparece em outro lugar da imagem (como em valores de carne, comprovantes de pagamento, logos, ou qualquer outro texto que nao seja o campo Excursao), ou quando ha qualquer ambiguidade -- retorne sem taxa. NUNCA infira taxa a partir de números, valores monetários de boletos/comprovantes, ou qualquer simbolo fora do campo Excursao da etiqueta de loja/excursao."}` }
       ]}]
     })
-  });
+  }, 30000, 'Tempo de leitura esgotado. Verifique sua conexão e tente novamente.');
   if (!resp.ok) throw new Error('Não foi possível ler esta etiqueta. Use uma foto mais nítida e tente novamente.');
   const data = await resp.json();
   const text = data.content.map(c => c.text||'').join('').replace(/```json|```/g,'').trim();
@@ -1840,11 +1888,18 @@ function normalizarTelefone(tel) {
 }
 
 async function enviarFoto(file, dados, serverUrl, instanceName, apiKey) {
-  const b64 = await toBase64(file);
   const telefone = normalizarTelefone(dados.telefone);
+  // Valida o tamanho do número antes de gastar tempo enviando: um número de celular
+  // brasileiro com DDI sempre tem 12 ou 13 dígitos (55 + DDD + número). Se vier diferente,
+  // é sinal de que a IA leu algum dígito errado na etiqueta — avisa de forma clara
+  // em vez de deixar o erro genérico de "falha ao enviar" confundir com problema de conexão.
+  if (telefone.length !== 12 && telefone.length !== 13) {
+    throw new Error('Número de telefone parece incompleto ou inválido. Confira a etiqueta e tente o envio manual.');
+  }
+  const b64 = await toBase64(file);
   const caption = montarMensagem(dados);
   const url = `https://${serverUrl}/message/sendMedia/${instanceName}`;
-  const resp = await fetch(url, {
+  const resp = await fetchComTimeout(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
     body: JSON.stringify({
@@ -1855,7 +1910,7 @@ async function enviarFoto(file, dados, serverUrl, instanceName, apiKey) {
       fileName: file.name || 'comprovante.jpg',
       caption: caption
     })
-  });
+  }, 30000, 'Tempo de envio esgotado. Verifique sua conexão e tente novamente.');
   if (!resp.ok) {
     const txt = await resp.text();
     throw new Error('Falha ao enviar a foto. Verifique sua conexão e tente novamente.');
@@ -1908,7 +1963,7 @@ function showDone(ok, err) {
   document.getElementById('s-err').textContent = err;
   document.getElementById('done-list').innerHTML = dadosLidos.map((r, i) => `
     <div class="item-row">
-      <img class="item-thumb" src="${r.previewUrl}" onclick="abrirFotoResultado(${i})" style="cursor:pointer;" title="Toque para ampliar" />
+      <img class="item-thumb" src="${r.previewUrl}" loading="lazy" onclick="abrirFotoResultado(${i})" style="cursor:pointer;" title="Toque para ampliar" />
       <div class="item-info">
         <div class="name">${escHtml(r.nome||'?')}</div>
         <div class="detail">${escHtml(r.telefone||r.erro||'')}</div>
