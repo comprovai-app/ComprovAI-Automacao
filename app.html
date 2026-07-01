@@ -578,6 +578,8 @@ async function ativarPorCodigo() {
       const diaVenc = new Date(cfg.vencimento).getUTCDate();
       if (diaVenc >= 1 && diaVenc <= 31) localStorage.setItem('dia_ciclo', String(diaVenc));
     }
+    // Se o admin pediu um reset do contador (ex: zerar envios de teste da ativação), aplica agora
+    processarResetRemoto(cfg);
 
     // Atualiza os campos ocultos também
     document.getElementById('anthropic-key').value = cfg.anthropic_key || '';
@@ -639,6 +641,8 @@ async function sincronizarConfig() {
       const diaVenc = new Date(cfg.vencimento).getUTCDate();
       if (diaVenc >= 1 && diaVenc <= 31) localStorage.setItem('dia_ciclo', String(diaVenc));
     }
+    // Se o admin pediu um reset do contador desde a última sincronização, aplica agora
+    processarResetRemoto(cfg);
     atualizarResumoUsoMensal();
     return { ok: true, motivo: 'atualizado' };
   } catch (e) {
@@ -1380,6 +1384,20 @@ function verificarResetMensal() {
   if (cicloSalvo !== cicloAtual) {
     localStorage.setItem('uso_mensal_mes', cicloAtual);
     localStorage.setItem('uso_mensal_contador', '0');
+  }
+}
+
+// Verifica se o admin pediu um reset manual do contador (ex: para zerar envios de
+// teste feitos na ativação de um cliente novo). O servidor guarda QUANDO o reset foi
+// pedido (ultimo_reset_uso); se for diferente do que este aparelho já processou,
+// zera o contador local e marca como processado, para não zerar de novo à toa.
+function processarResetRemoto(cfg) {
+  if (!cfg || !cfg.ultimo_reset_uso) return;
+  const jaProcessado = localStorage.getItem('reset_uso_processado');
+  if (cfg.ultimo_reset_uso !== jaProcessado) {
+    localStorage.setItem('uso_mensal_contador', '0');
+    localStorage.setItem('uso_mensal_mes', obterIdentificadorCicloAtual());
+    localStorage.setItem('reset_uso_processado', cfg.ultimo_reset_uso);
   }
 }
 
