@@ -111,6 +111,21 @@
   .thumb .remover:hover { background:#dc3545; }
   .progress-bar { height:6px; background:#e0e0e0; border-radius:3px; overflow:hidden; margin: 8px 0 4px; }
   .progress-fill { height:100%; background:var(--cor-loja,#3a3f44); border-radius:3px; transition:width .4s ease; }
+
+  /* Card de plano repaginado */
+  .plano-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 22px 20px; }
+  .plano-card-topo { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .plano-badge { display: inline-flex; align-items: center; gap: 7px; background: #000; color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 15px; font-weight: 700; letter-spacing: .01em; }
+  .plano-badge .pico { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
+  .plano-ciclo-tag { font-size: 11px; color: var(--text-tertiary); text-align: right; line-height: 1.4; }
+  .plano-numeros { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+  .plano-usado { font-size: 40px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+  .plano-de-total { font-size: 16px; color: var(--text-secondary); font-weight: 600; }
+  .plano-restante { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+  .plano-restante b { color: #2ecc71; }
+  .plano-barra-grande { height: 10px; background: var(--gray-bg, #eee); border-radius: 999px; overflow: hidden; }
+  .plano-barra-grande-fill { height: 100%; background: #2ecc71; border-radius: 999px; transition: width .5s ease; width: 0%; }
+  .plano-pct { text-align: right; font-size: 11px; color: var(--text-tertiary); margin-top: 6px; font-weight: 600; }
   .progress-label { display:flex; justify-content:space-between; font-size:12px; color:#888; }
   .item-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--row-border); }
   .item-row:last-child { border-bottom:none; }
@@ -390,25 +405,20 @@
     </div>
 
     <div id="tab-plano" style="display:none">
-      <div class="card">
-        <div class="card-title" style="margin-bottom:0;">📦 Seu plano</div>
-        <div style="text-align:center; padding:12px 0;">
-          <div style="font-size:13px; color:var(--text-secondary); margin-bottom:4px;">Limite mensal</div>
-          <div style="font-size:28px; font-weight:700; color:var(--text-primary);" id="limite-travado-valor">—</div>
-          <div style="font-size:12px; color:var(--text-secondary);">comprovantes por mês</div>
-          <div style="font-size:12px; color:var(--text-secondary); margin-top:8px;" id="ciclo-travado-info"></div>
+      <div class="plano-card">
+        <div class="plano-card-topo">
+          <span class="plano-badge"><span class="pico"></span><span id="plano-nome-badge">—</span></span>
+          <div class="plano-ciclo-tag" id="plano-ciclo-tag"></div>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">📊 Uso deste mês</div>
-        <div id="uso-mensal-resumo" style="text-align:center; padding:8px 0;">
-          <div style="font-size:32px; font-weight:700; color:var(--text-primary);" id="uso-mensal-numero">0</div>
-          <div style="font-size:13px; color:var(--text-secondary);" id="uso-mensal-label">comprovantes enviados</div>
+        <div class="plano-numeros">
+          <span class="plano-usado" id="uso-mensal-numero">0</span>
+          <span class="plano-de-total">de <span id="limite-travado-valor">—</span></span>
         </div>
-        <div class="progress-bar" style="margin-top:8px;">
-          <div class="progress-fill" id="uso-mensal-barra" style="width:0%"></div>
+        <div class="plano-restante" id="plano-restante"></div>
+        <div class="plano-barra-grande">
+          <div class="plano-barra-grande-fill" id="uso-mensal-barra"></div>
         </div>
+        <div class="plano-pct" id="plano-pct"></div>
       </div>
     </div>
 
@@ -579,6 +589,7 @@ async function ativarPorCodigo() {
       if (diaVenc >= 1 && diaVenc <= 31) localStorage.setItem('dia_ciclo', String(diaVenc));
     }
     // Se o admin pediu um reset do contador (ex: zerar envios de teste da ativação), aplica agora
+    if (cfg.plano) localStorage.setItem('plano_nome', cfg.plano);
     processarResetRemoto(cfg);
 
     // Atualiza os campos ocultos também
@@ -642,6 +653,7 @@ async function sincronizarConfig() {
       if (diaVenc >= 1 && diaVenc <= 31) localStorage.setItem('dia_ciclo', String(diaVenc));
     }
     // Se o admin pediu um reset do contador desde a última sincronização, aplica agora
+    if (cfg.plano) localStorage.setItem('plano_nome', cfg.plano);
     processarResetRemoto(cfg);
     atualizarResumoUsoMensal();
     return { ok: true, motivo: 'atualizado' };
@@ -1600,34 +1612,52 @@ function resetarContadorMensal() {
 
 function atualizarResumoUsoMensal() {
   const usoEl = document.getElementById('uso-mensal-numero');
-  const labelEl = document.getElementById('uso-mensal-label');
   const barraEl = document.getElementById('uso-mensal-barra');
   if (!usoEl) return;
 
   const uso = obterUsoMensal();
   const limite = obterLimiteMensal();
 
+  // Nome do plano (traduz o codigo interno para o nome comercial)
+  const NOMES_PLANO = { basico: 'Start', intermediario: 'Plus', avancado: 'Pro', premium: 'Premium', enterprise: 'Enterprise' };
+  const codigoPlano = localStorage.getItem('plano_nome') || '';
+  const badgeEl = document.getElementById('plano-nome-badge');
+  if (badgeEl) badgeEl.textContent = NOMES_PLANO[codigoPlano] || 'Meu plano';
+
   usoEl.textContent = uso;
+
+  const limiteValorEl = document.getElementById('limite-travado-valor');
+  const restanteEl = document.getElementById('plano-restante');
+  const pctEl = document.getElementById('plano-pct');
+
   if (limite) {
-    labelEl.textContent = `de ${limite} comprovantes neste mês`;
+    if (limiteValorEl) limiteValorEl.textContent = limite + ' envios';
     const pct = Math.min(100, Math.round((uso / limite) * 100));
-    barraEl.style.width = pct + '%';
-    barraEl.style.background = pct >= 100 ? '#dc3545' : (pct >= 80 ? '#e6a700' : 'var(--cor-loja,#3a3f44)');
+    if (barraEl) {
+      barraEl.style.width = pct + '%';
+      barraEl.style.background = pct >= 100 ? '#dc3545' : (pct >= 80 ? '#e6a700' : '#2ecc71');
+    }
+    const restam = Math.max(0, limite - uso);
+    if (restanteEl) {
+      restanteEl.innerHTML = restam > 0
+        ? `Você ainda tem <b>${restam}</b> envio${restam === 1 ? '' : 's'} este mês`
+        : `Limite do mês atingido — renova em breve`;
+    }
+    if (pctEl) pctEl.textContent = pct + '% usado';
   } else {
-    labelEl.textContent = 'comprovantes enviados';
-    barraEl.style.width = '0%';
+    // Plano ilimitado (Enterprise)
+    if (limiteValorEl) limiteValorEl.textContent = 'ilimitado';
+    if (barraEl) { barraEl.style.width = '100%'; barraEl.style.background = '#2ecc71'; }
+    if (restanteEl) restanteEl.innerHTML = 'Envios <b>ilimitados</b> neste plano';
+    if (pctEl) pctEl.textContent = '';
   }
 
-  // Mostra o limite do plano (somente leitura) e a info do ciclo
-  const limiteValorEl = document.getElementById('limite-travado-valor');
-  const cicloInfoEl = document.getElementById('ciclo-travado-info');
-  if (limiteValorEl) {
-    limiteValorEl.textContent = limite ? limite : 'Ilimitado';
-  }
-  if (cicloInfoEl) {
+  // Info do ciclo de renovacao
+  const cicloTagEl = document.getElementById('plano-ciclo-tag');
+  if (cicloTagEl) {
     const diaCiclo = obterDiaCiclo();
     const proximaRenovacao = calcularProximaRenovacao(diaCiclo);
-    cicloInfoEl.textContent = `🔄 Ciclo renova todo dia ${diaCiclo} · próxima: ${proximaRenovacao}`;
+    cicloTagEl.innerHTML = `🔄 Renova dia ${diaCiclo}<br>${proximaRenovacao}`;
   }
 }
 
